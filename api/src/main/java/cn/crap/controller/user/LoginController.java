@@ -276,16 +276,16 @@ public class LoginController extends BaseController<User> {
 	@ResponseBody
 	public JsonResult JsonResult(@ModelAttribute LoginDto model) throws IOException, MyException {
 		try{
-			if (cacheService.getSetting(Const.SETTING_VERIFICATIONCODE).getValue().equals("true")) {
-				if(MyString.isEmpty(model.getVerificationCode()) ){
-					model.setTipMessage("验证码为空,请刷新浏览器再试！");
-					return new JsonResult(1, model);
-				}
-				if (!model.getVerificationCode().equals(Tools.getImgCode(request))) {
-					model.setTipMessage("验证码有误,请重新输入或刷新浏览器再试！");
-					return new JsonResult(1, model);
-				}
-			}
+//			if (cacheService.getSetting(Const.SETTING_VERIFICATIONCODE).getValue().equals("true")) {
+//				if(MyString.isEmpty(model.getVerificationCode()) ){
+//					model.setTipMessage("验证码为空,请刷新浏览器再试！");
+//					return new JsonResult(1, model);
+//				}
+//				if (!model.getVerificationCode().equals(Tools.getImgCode(request))) {
+//					model.setTipMessage("验证码有误,请重新输入或刷新浏览器再试！");
+//					return new JsonResult(1, model);
+//				}
+//			}
 
 			// 只允许普通账号方式登陆，第三方绑定必须通过设置密码，并且没有重复的账号、邮箱才能登陆
 			List<User> users = null;
