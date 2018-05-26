@@ -7,10 +7,10 @@ public class ResponseParamDto implements Serializable{
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
-	private String name;
-	private String type;
-	private String remark;
-	private int deep;
+	private String name = "";
+	private String type = "";
+	private String remark = "";
+	private Integer deep = 0;
 	private String necessary;
 	public String getName() {
 		return name;
@@ -30,10 +30,10 @@ public class ResponseParamDto implements Serializable{
 	public void setRemark(String remark) {
 		this.remark = remark;
 	}
-	public int getDeep() {
+	public Integer getDeep() {
 		return deep;
 	}
-	public void setDeep(int deep) {
+	public void setDeep(Integer deep) {
 		this.deep = deep;
 	}
 	public String getNecessary() {

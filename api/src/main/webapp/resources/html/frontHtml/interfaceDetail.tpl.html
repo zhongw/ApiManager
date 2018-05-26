@@ -2,10 +2,10 @@
 <button type="button" class="ndis" id="refresh" ng-click="getData(1,true);"></button>
 <div class="col-xs-12 p0 f12 lh26 interface-detail">
 		<div class="bb1 fb f20 pb10 C555 mt0">
-			<div class="fl m0">Url：{{model.moduleUrl}}{{model.url}}</div>
+			<div class="fl m0">Url：<button class="btn btn-xs btn-adorn r20">{{model.moduleUrl}}{{model.url}}</button></div>
 			<div class="fr m0">
 				版本号：
-				<a href="javascript:void(0)" class="f12 btn btn-purple btn-xs" ><i class="iconfont">&#xe620;&nbsp;</i>{{model.version}}</a>
+				<a href="javascript:void(0)" class="f12 btn btn-adorn btn-xs" ><i class="iconfont">&#xe620;&nbsp;</i>{{model.version}}</a>
 				<a ng-href="#/{{model.projectId}}/front/interfaceDetail/{{version.id}}" 
 					class="f12 btn btn-default btn-xs" ng-repeat="version in versions" >
 					<i class="iconfont">&#xe620;&nbsp;</i>{{version.version}}
@@ -23,6 +23,7 @@
   			<p class="cursor pl20" onclick="scrollToId('1_2')">1.2  版本号</p>
   			<p class="cursor pl20" onclick="scrollToId('1_3')">1.3  接口说明</p>
   			<p class="cursor pl20" onclick="scrollToId('1_4')">1.4  接口状态</p>
+			<p class="cursor pl20" onclick="scrollToId('1_5')">1.5  ContentType类型</p>
   			<p class="cursor" onclick="scrollToId('2')">2  接口调用说明</p>
   			<p class="cursor pl20" onclick="scrollToId('2_1')">2.1 URL</p>
   			<p class="cursor pl20" onclick="scrollToId('2_2')">2.2 Mock地址</p>
@@ -48,7 +49,10 @@
 		<div id="1_4">1.4 接口状态</div>
 		<span ng-if="model.status==1">可用</span>
 		<span ng-if="model.status==0">不可用</span>
-		
+
+		<div id="1_5">1.5 返回contentType类型</div>
+		<span ng-bind="model.contentType"></span>
+
 		<div class="fb f18" id="2">2接口调用说明</div>
 		<div id="2_1">2.1 URL</div>
 		{{model.moduleUrl}}{{model.url}}
@@ -80,9 +84,9 @@
 			<thead>
 				<tr class="BGEEE C000">
 					<th class="tc w100">名称</th>
-					<th class="tc w50">是否必须</th>
+					<th class="tc w50">必填</th>
 					<th class="tc w100">类型</th>
-					<th class="tc w100">默认值</th>
+					<th class="tc w150">默认值</th>
 					<th class="tc">备注</th>
 				</tr>
 			</thead>
@@ -109,7 +113,7 @@
 				<th class="w50"></th>
 				<th class="tc">名称</th>
 				<th class="tc w100">类型</th>
-				<th class="tc w100">是否必须</th>
+				<th class="tc w100">必填</th>
 				<th class="tc w200">备注</th>
 			</tr>
 		</thead>
@@ -137,22 +141,22 @@
 		<thead>
 			<tr class="BGEEE C000">
 				<th class="tc">名称</th>
-				<th class="tc w50">是否必须</th>
+				<th class="tc w50">必填</th>
 				<th class="tc w100">参数位置</th>
 				<th class="tc w100">类型</th>
-				<th class="tc w100">默认值</th>
+				<th class="tc w150">默认值</th>
 				<th class="tc w300">备注</th>
 			</tr>
 		</thead>
 		<tbody>
-			<tr ng-repeat="item in formParams">
-				<td class="tc fb C000">{{item.name}}</td>
-				<td class="tc C000">{{item.necessary}}</td>
-				<td class="tc C000" ng-if="item.inUrl && item.inUrl=='true'">请求URL</td>
-				<td class="tc C000" ng-if="!item.inUrl || item.inUrl!='true'">普通参数</td>
-				<td class="tc C000">{{item.type}}</td>
-				<td class="tc C000">{{item.def}}</td>
-				<td class="tc C000">{{item.remark}}</td>
+			<tr ng-repeat="item in formParams" class="tc C000">
+				<td class="fb">{{item.name}}</td>
+				<td ng-class="{true: 'bg-danger', false:''}[item.necessary == 'true']">{{item.necessary}}</td>
+				<td ng-if="item.inUrl && item.inUrl=='true'">请求URL</td>
+				<td ng-if="!item.inUrl || item.inUrl!='true'">普通参数</td>
+				<td>{{item.type}}</td>
+				<td>{{item.def}}</td>
+				<td>{{item.remark}}</td>
 			</tr>
 		</tbody>
 		</table>
@@ -175,14 +179,14 @@
 			</tr>
 		</thead>
 		<tbody>
-			<tr ng-repeat="item in responseParams">
+			<tr ng-repeat="item in responseParams" class="tc C000">
 				<td class="tc" style="color:red;">{{item.deep}}</td>
-				<td class="C000 pl20">
+				<td class="pl20 tl">
 					<span style="padding-left:{{item.deep*15 + 'px'}}">{{item.name}}</span>
 				</td>
-				<td class="tc C000">{{item.type}}</td>
-				<td class="tc C000">{{item.necessary}}</td>
-				<td class="tc C000">{{item.remark}}</td>
+				<td>{{item.type}}</td>
+				<td ng-class="{true: 'bg-danger', false:''}[item.necessary == 'true']">{{item.necessary}}</td>
+				<td>{{item.remark}}</td>
 			</tr>
 		</tbody>
 		</table>
