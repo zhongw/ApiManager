@@ -36,7 +36,8 @@ public class EmailService implements IEmailService {
 		String fromName = settingCache.get(ISetting.S_TITLE).getValue();
 		MimeMessage mimeMessage = mailSenderService.createMimeMessage();
 		MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-		messageHelper.setFrom(mailSenderService.getUsername(), fromName); 
+		//messageHelper.setFrom(mailSenderService.getUsername(), fromName); 
+		messageHelper.setFrom(""); 
 		messageHelper.setSubject(mailBean.getSubject());  
 		messageHelper.setTo(mailBean.getToEmail());  
 		messageHelper.setText(mailBean.getContext(), true);// html: true  
