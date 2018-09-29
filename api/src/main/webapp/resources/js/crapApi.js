@@ -11,7 +11,7 @@ function propUpPsswordDiv(obj){
 	}
 }
 
-/****************数据字典****************/
+/****************数据库表****************/
 function addOneField(name, type, notNull,flag, def, remark, rowNum) {
 	if (!rowNum || rowNum == '') {
 		var mydate = new Date();
@@ -161,7 +161,9 @@ function checkText(obj, oldNavigateText, span, checkBox, length) {
 			container.scrollTop(scrollTo.offset().top - container.offset().top
 					+ container.scrollTop() - 100);
 			$("#pickContent div").removeClass("pickSelect");
+            $("#pickContent div").removeClass("main-color");
 			$(obj).addClass("pickSelect");
+            $(obj).addClass("main-color");
 			select = 1;
 		}
 	}
@@ -230,39 +232,11 @@ function needHiddenModule() {
 		iShow("roleModuleId");
 	}
 }
-// 创建kindEditory
-// 子页面加载一次，需要初始化编辑器（点击左边菜单是更新editorId）
-function createKindEditor(id,modelField){
-	var root = getRootScope();
-	if(window.oldEditorId != window.editorId || window.editor == null){
-		if(window.editorId)
-			window.oldEditorId = window.editorId;
-		window.editor =  KindEditor.create('#'+id,{
-	        uploadJson : 'file/upload.do',
-	        filePostName: 'img',
-	        allowFileManager : true,
-	        afterBlur: function () { 
-	        	editor.sync();
-	        	root.model[modelField] = $('#'+id).val();
-	        }
-		});
-	}
-	window.editor.html(root.model[modelField]);
-	changeDisplay('kindEditor','defEditor')
-}
-// 保存markdown
-function saveMarkdown(markdown,content){
-	var rootScope = getRootScope();
-	rootScope.$apply(function () {    
-	    rootScope.model[markdown] = getMarkdownText( $(window.frames["markdownFrame"].document).find('.ace_text-layer').html() );
-	    rootScope.model[content] = $(window.frames["markdownFrame"].document).find('#preview').html();
-	});
-	closeMyDialog('markdownDialog');
-}
+
 // 重建索引
 function rebuildIndex(obj){
 	if (myConfirm("确定重建索引？")) {
-		selectButton(obj,'menu-a');
+		selectButton(obj,'menu_a');
 		callAjaxByName('iUrl=back/rebuildIndex.do|iLoading=PROPUPFLOAT重建索引中，刷新页面可以查看实时进度...|ishowMethod=updateDivWithImg');
 	}
 }
@@ -274,7 +248,7 @@ function loginOut(){
 //刷新缓存
 function flushDB(obj){
 	if (myConfirm("确定刷新缓存？")) {
-		selectButton(obj,'menu-a');
+		selectButton(obj,'menu_a');
 		callAjaxByName('iUrl=back/flushDB.do|iLoading=TIPFLOAT刷新中，请稍后...|ishowMethod=updateDivWithImg');
 	}
 }

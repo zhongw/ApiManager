@@ -2,25 +2,26 @@ package cn.crap.controller.admin;
 
 import cn.crap.adapter.RoleAdapter;
 import cn.crap.dto.RoleDto;
-import cn.crap.model.mybatis.RoleCriteria;
-import cn.crap.model.mybatis.RoleWithBLOBs;
-import cn.crap.service.mybatis.RoleService;
+import cn.crap.framework.JsonResult;
+import cn.crap.framework.MyException;
+import cn.crap.framework.base.BaseController;
+import cn.crap.framework.interceptor.AuthPassport;
+import cn.crap.model.RoleCriteria;
+import cn.crap.model.RoleWithBLOBs;
+import cn.crap.service.RoleService;
+import cn.crap.utils.MyString;
+import cn.crap.utils.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import cn.crap.framework.JsonResult;
-import cn.crap.framework.interceptor.AuthPassport;
-import cn.crap.framework.base.BaseController;
-import cn.crap.utils.MyString;
-import cn.crap.utils.Page;
 
 import java.util.List;
 
 @Controller
-@RequestMapping("/role")
+@RequestMapping("/admin/role")
 public class RoleController extends BaseController {
 
     @Autowired
@@ -54,7 +55,7 @@ public class RoleController extends BaseController {
     @RequestMapping("/addOrUpdate.do")
     @ResponseBody
     @AuthPassport(authority = C_AUTH_ROLE)
-    public JsonResult addOrUpdate(@ModelAttribute RoleDto roleDto) {
+    public JsonResult addOrUpdate(@ModelAttribute RoleDto roleDto) throws Exception{
         if (roleDto.getId() != null) {
             roleService.update(RoleAdapter.getModel(roleDto));
         } else {
@@ -66,7 +67,7 @@ public class RoleController extends BaseController {
     @RequestMapping("/delete.do")
     @ResponseBody
     @AuthPassport(authority = C_AUTH_ROLE)
-    public JsonResult delete(@RequestParam String id) {
+    public JsonResult delete(@RequestParam String id) throws MyException{
         roleService.delete(id);
         return SUCCESS;
     }

@@ -4,15 +4,11 @@ import cn.crap.dto.LoginInfoDto;
 import cn.crap.dto.PickDto;
 import cn.crap.enumer.*;
 import cn.crap.framework.MyException;
-import cn.crap.model.mybatis.*;
-import cn.crap.service.IPickService;
-import cn.crap.service.custom.CustomModuleService;
-import cn.crap.service.mybatis.ArticleService;
-import cn.crap.service.mybatis.ProjectService;
-import cn.crap.service.mybatis.RoleService;
+import cn.crap.model.*;
+import cn.crap.query.ProjectQuery;
+import cn.crap.service.*;
 import cn.crap.utils.IConst;
 import cn.crap.utils.LoginUserHelper;
-import cn.crap.utils.MyString;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -32,7 +28,7 @@ public class AdminPickService implements IPickService{
     @Autowired
     private ArticleService articleService;
     @Autowired
-    private CustomModuleService customModuleService;
+    private ModuleService moduleService;
     @Autowired
     private RoleService roleService;
 
@@ -51,7 +47,7 @@ public class AdminPickService implements IPickService{
         List<PickDto> picks = new ArrayList<>();
         PickDto pick = null;
         String preUrl = "";
-        ProjectCriteria projectCriteria = new ProjectCriteria();
+        ProjectQuery recommendProjectQuery = new ProjectQuery().setStatus(ProjectStatus.RECOMMEND.getStatus()).setCurrentPage(1).setPageSize(50);
         ArticleCriteria articleCriteria = new ArticleCriteria();
         switch (pickCode) {
 
@@ -84,7 +80,7 @@ public class AdminPickService implements IPickService{
                 picks.add(pick);
                 pick = new PickDto("modelName_4", "接口", "接口");
                 picks.add(pick);
-                pick = new PickDto("modelName_5", "数据字典", "数据字典");
+                pick = new PickDto("modelName_5", "数据库表", "数据库表");
                 picks.add(pick);
                 return picks;
             case INDEX_PAGE:// 首页
@@ -96,8 +92,7 @@ public class AdminPickService implements IPickService{
                 pick = new PickDto(IConst.SEPARATOR, "项目主页【推荐项目】");
                 picks.add(pick);
 
-                projectCriteria.createCriteria().andStatusEqualTo(ProjectStatus.RECOMMEND.getStatus());
-                for (Project project : projectService.selectByExample(projectCriteria)) {
+                for (Project project : projectService.query(recommendProjectQuery)) {
                     pick = new PickDto(project.getId(), String.format(IConst.FRONT_PROJECT_URL, project.getId()), project.getName());
                     picks.add(pick);
                 }
@@ -105,12 +100,11 @@ public class AdminPickService implements IPickService{
                 pick = new PickDto(IConst.SEPARATOR, "推荐文章、站点页面");
                 picks.add(pick);
 
-                pick = new PickDto("recommend_article", "index.do#NULL/article/list/NULL/ARTICLE/NULL/NULL/" + ArticleStatus.RECOMMEND.getStatus(), "推荐文章列表");
+                pick = new PickDto("recommend_article", "index.do#/article/list?type=ARTICLE&status=" + ArticleStatus.RECOMMEND.getStatus(), "推荐文章列表");
                 picks.add(pick);
 
                 preUrl = "index.do#/NULL/article/detail/NULL/PAGE/";
-                articleCriteria.createCriteria().andStatusEqualTo(ArticleStatus.PAGE.getStatus()).andMkeyIsNotNull();
-                for (Article w : articleService.selectByExample(articleCriteria)) {
+                for (Article w : articleService.queryTop100Page()) {
                     pick = new PickDto("wp_" + w.getMkey(), preUrl + w.getMkey(), w.getName()+" [页面]");
                     picks.add(pick);
                 }
@@ -118,16 +112,15 @@ public class AdminPickService implements IPickService{
             case MENU_URL:
                 pick = new PickDto(IConst.SEPARATOR, "项目列表");
                 picks.add(pick);
-                pick = new PickDto("m_myproject", "index.do#/project/list/true/NULL", "我的项目列表");
+                pick = new PickDto("m_myproject", "index.do#/project/list?myself=true", "我的项目列表");
                 picks.add(pick);
-                pick = new PickDto("recommend_project", "index.do#/project/list/false/NULL", "推荐项目列表");
+                pick = new PickDto("recommend_project", "index.do#/project/list?myself=false", "推荐项目列表");
                 picks.add(pick);
 
                 pick = new PickDto(IConst.SEPARATOR, "项目主页【推荐项目】");
                 picks.add(pick);
 
-                projectCriteria.createCriteria().andStatusEqualTo(ProjectStatus.RECOMMEND.getStatus());
-                for (Project project : projectService.selectByExample(projectCriteria)) {
+                for (Project project : projectService.query(recommendProjectQuery)) {
                     pick = new PickDto(project.getId(), String.format(IConst.FRONT_PROJECT_URL, project.getId()), project.getName());
                     picks.add(pick);
                 }
@@ -135,12 +128,12 @@ public class AdminPickService implements IPickService{
                 pick = new PickDto(IConst.SEPARATOR, "推荐文章、站点页面");
                 picks.add(pick);
 
-                pick = new PickDto("recommend_article", "index.do#NULL/article/list/NULL/ARTICLE/NULL/NULL/" + ArticleStatus.RECOMMEND.getStatus(), "推荐文章列表");
+                pick = new PickDto("recommend_article", "index.do#article/list?type=ARTICLE&status=" + ArticleStatus.RECOMMEND.getStatus(), "推荐文章列表");
                 picks.add(pick);
 
                 preUrl = "index.do#/NULL/article/detail/NULL/PAGE/";
-                articleCriteria.createCriteria().andStatusEqualTo(ArticleStatus.PAGE.getStatus()).andMkeyIsNotNull();
-                for (Article w : articleService.selectByExample(articleCriteria)) {
+
+                for (Article w : articleService.queryTop100Page()) {
                     pick = new PickDto("wp_" + w.getMkey(), preUrl + w.getMkey(), w.getName()+" [页面]");
                     picks.add(pick);
                 }

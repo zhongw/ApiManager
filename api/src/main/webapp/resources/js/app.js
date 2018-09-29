@@ -1,4 +1,4 @@
-var app = angular.module('app', [ 'ui.router', 'mainModule','webModule','interfaceMethods','textAngular']);
+var app = angular.module('app', [ 'ui.router', 'userModule','visitorModule','interfaceMethods']);
 var NEED_PASSWORD_CODE = "E000007";
 var INVALID_PASSWORD_CODE = "E000011";
 
@@ -10,11 +10,20 @@ var INVALID_PASSWORD_CODE = "E000011";
  * @param  {[type]} $stateParams
  * @return {[type]}
  */
-app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) {
+app.run(function($rootScope, $state, $stateParams, $location, $http, $timeout,httpService) {
 	$rootScope.$state = $state;
 	$rootScope.$stateParams = $stateParams;
 	$rootScope.pick = [];
-	
+    $rootScope.stopPropagation = function (e) {
+        e.stopPropagation();
+       return false;
+    }
+    $rootScope.goBack = function goBack(){
+        history.back(-1);
+    }
+    $rootScope.go = function (href) {
+        $location.url(href);
+    }
 	$rootScope.loadPickByName = function loadPick(params,event,iCallBack,iCallBackParam) { 
 		var iwidth = getValue(params,'iwidth');
 		var iheight = getValue(params,'iheight');
@@ -52,8 +61,10 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
 		showMessage('lookUp','false',false,-1);
 	}
 	$rootScope.getBaseData = function($scope,$http,params,page) {
-		if(page) $scope.currentPage = page;
-		if($scope.currentPage) params += "&currentPage="+$scope.currentPage;
+		if(page) {
+            params += "&currentPage=" + page;
+        }
+
 		httpService.callHttpMethod($http,params).success(function(result) {
 			var isSuccess = httpSuccess(result,'iLoading=FLOAT','0');
 			if(!isJson(result)||isSuccess.indexOf('[ERROR]') >= 0){
@@ -61,7 +72,7 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
 				 $rootScope.list = null;
 			 }else{
 				 $rootScope.error = null;
-				 $rootScope.list = result.data;
+                 $rootScope.list = result.data;
 				 $rootScope.page = result.page;
 				 $rootScope.others=result.others;
 				 $rootScope.deleteIds = ",";
@@ -70,9 +81,32 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
 			lookUp('lookUp','',100,300,3);
 			closeTip('[ERROR]未知异常，请联系开发人员查看日志', 'iLoading=PROPUP_FLOAT', 3);
 			$rootScope.error = result;
-			 
+
 		});;
     };
+    $rootScope.getBaseDataToDataKey = function($scope,$http,params,page,dataKey,callBack) {
+        if(page) {
+            params += "&currentPage=" + page;
+        }
+        httpService.callHttpMethod($http,params).success(function(result) {
+            var isSuccess = httpSuccess(result,'iLoading=FLOAT','0');
+            if(!isJson(result)||isSuccess.indexOf('[ERROR]') >= 0){
+                $rootScope.error = isSuccess.replace('[ERROR]', '');
+            }else{
+                $rootScope.error = null;
+                $rootScope[dataKey] = result.data;
+                if (callBack){
+                    callBack();
+                }
+            }
+        }).error(function(result) {
+            lookUp('lookUp','',100,300,3);
+            closeTip('[ERROR]未知异常，请联系开发人员查看日志', 'iLoading=PROPUP_FLOAT', 3);
+            $rootScope.error = result;
+
+        });
+    };
+
 	$rootScope.detail = function(title,iwidth,iurl,iParams,callBack) {
 			//打开编辑对话框
 			openMyDialog(title,iwidth);
@@ -98,6 +132,9 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
 				 
 			});;
 	};
+    $rootScope.createInterfaceEditor = function () {
+        createWangEditor("interface-editor","remark", initInterfaceEditor);
+    }
 	//点击详情回调，清除编辑缓存页面的table
 	$rootScope.initEditInterFace = function (){
 		changeDisplay('interFaceDetail','copyInterFace');
@@ -107,6 +144,7 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
 		$("#header").removeClass('none');
 		$("#responseEparam").addClass('none');
 		$("#responseParam").removeClass('none');
+        $rootScope.createInterfaceEditor();
 	}
 	//点击拷贝接口详情回调
 	$rootScope.copyInterface = function() {
@@ -279,7 +317,7 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
         changeimg('imgCode2','verificationCode');
     }
 	/**
-	 * 提交数据字典时回调将表格数据转换为json
+	 * 提交数据库表时回调将表格数据转换为json
 	 */
 	$rootScope.preAddDictionary = function(){
 		var content = getParamFromTable("content");
@@ -291,28 +329,7 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
 	$rootScope.logDetailFormat = function(){
 		$rootScope.model.content  = format($rootScope.model.content);
 	}
-	/**
-	 * 数据字典、文章编辑回调
-	 */
-	$rootScope.getFields = function() {
-    		// 切换为默认编辑器
-    		changeDisplay('defEditor','kindEditor');
-	    	var content = "";
-	    	if($rootScope.model.content!=''){
-	    		// 如果是文章，eval会报错
-	    		try{
-	    			content = eval("("+$rootScope.model.content+")");
-	    		}catch(e){}
-	    	}
-	    	$("#content").find("tbody").find("tr").remove();
-	    	if(content!=null&&content!=""){
-		    	var i=0;
-		    	$.each(content, function (n, value) {
-		    		i++;
-		    		addOneField(value.name, value.type, value.notNull,value.flag, value.def, value.remark, value.rowNum);
-		        });  
-	    	}
-	};
+
 	$rootScope.jsonformat = function(id,tiperror){
 		var result = format($rootScope.model[id],tiperror);
 		if(result){
@@ -322,11 +339,7 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
 	$rootScope.callAjaxByName = function(iurl){
 		callAjaxByName(iurl);
 	}
-	/**************markdown*************/
-	$rootScope.markdownEtitor = function(href){
-		$("#markdownDialog").css('display','block'); 
-		document.getElementById("markdownFrame").src=href;
-	}
+
 	 $rootScope.iClose = function(id) {
 	    	iClose(id);
 	 };

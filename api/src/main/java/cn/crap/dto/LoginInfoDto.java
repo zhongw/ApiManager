@@ -1,18 +1,20 @@
 package cn.crap.dto;
 
+import cn.crap.enumer.UserType;
+import cn.crap.framework.MyException;
+import cn.crap.model.*;
+import cn.crap.query.ProjectQuery;
+import cn.crap.query.ProjectUserQuery;
+import cn.crap.service.ProjectService;
+import cn.crap.service.ProjectUserService;
+import cn.crap.service.RoleService;
+import cn.crap.utils.IConst;
+import cn.crap.utils.Tools;
+
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import cn.crap.enumer.UserType;
-import cn.crap.model.mybatis.*;
-import cn.crap.model.mybatis.ProjectUser;
-import cn.crap.service.custom.CustomProjectService;
-import cn.crap.service.mybatis.RoleService;
-import cn.crap.service.mybatis.ProjectUserService;
-import cn.crap.utils.IConst;
-import cn.crap.utils.Tools;
 
 public class LoginInfoDto implements Serializable{
 	private static final long serialVersionUID = 1L;
@@ -27,7 +29,8 @@ public class LoginInfoDto implements Serializable{
 	private String avatarUrl;
 	private Map<String, ProjectUser> projects = new HashMap<String, ProjectUser>();
 
-	public LoginInfoDto(User user, RoleService roleService, CustomProjectService customProjectService, ProjectUserService projectUserService){
+	public LoginInfoDto(User user, RoleService roleService, ProjectService projectService,
+						ProjectUserService projectUserService) throws MyException{
 		this.userName = user.getUserName();
 		this.trueName = user.getTrueName();
 		this.roleId = user.getRoleId();
@@ -39,7 +42,7 @@ public class LoginInfoDto implements Serializable{
 		
 		StringBuilder sb = new StringBuilder(",");
 		// 将用户的自己的模块添加至权限中
-		List<Project> myProjects = customProjectService.queryMyProjectByUserId(id);
+		List<Project> myProjects = projectService.query(new ProjectQuery().setUserId(id));
 		for(Project project:myProjects){
 			sb.append(IConst.C_AUTH_PROJECT + project.getId()+",");
 		}
@@ -62,10 +65,7 @@ public class LoginInfoDto implements Serializable{
 		}
 		
 		// 项目成员
-		ProjectUserCriteria example = new ProjectUserCriteria();
-		ProjectUserCriteria.Criteria criteria = example.createCriteria().andUserIdEqualTo(id);
-
-		for(ProjectUser p: projectUserService.selectByExample(example)){
+		for(ProjectUser p: projectUserService.query(new ProjectUserQuery().setUserId(id))){
 			projects.put(p.getProjectId(), p);
 			sb.append(IConst.C_AUTH_PROJECT + p.getProjectId()+",");
 		}

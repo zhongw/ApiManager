@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="cn.crap.dao.mybatis.UserDao" >
-  <resultMap id="BaseResultMap" type="cn.crap.model.mybatis.User" >
+  <resultMap id="BaseResultMap" type="cn.crap.model.User" >
     <id column="id" property="id" jdbcType="VARCHAR" />
     <result column="userName" property="userName" jdbcType="VARCHAR" />
     <result column="password" property="password" jdbcType="VARCHAR" />
@@ -79,10 +79,10 @@
     </where>
   </sql>
   <sql id="Base_Column_List" >
-    id, userName, password, trueName, roleId, roleName, auth, authName, createTime, status, 
+    id, userName, password, trueName, roleId, roleName, auth, authName, createTime, status,
     sequence, type, email, avatarUrl, loginType, thirdlyId, passwordSalt
   </sql>
-  <select id="selectByExample" resultMap="BaseResultMap" parameterType="cn.crap.model.mybatis.UserCriteria" >
+  <select id="selectByExample" resultMap="BaseResultMap" parameterType="cn.crap.model.UserCriteria" >
     select
     <if test="distinct" >
       distinct
@@ -105,7 +105,7 @@
     </choose>
   </select>
   <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.String" >
-    select 
+    select
     <include refid="Base_Column_List" />
     from user
     where id = #{id,jdbcType=VARCHAR}
@@ -114,27 +114,27 @@
     delete from user
     where id = #{id,jdbcType=VARCHAR}
   </delete>
-  <delete id="deleteByExample" parameterType="cn.crap.model.mybatis.UserCriteria" >
+  <delete id="deleteByExample" parameterType="cn.crap.model.UserCriteria" >
     delete from user
     <if test="_parameter != null" >
       <include refid="Example_Where_Clause" />
     </if>
   </delete>
-  <insert id="insert" parameterType="cn.crap.model.mybatis.User" >
+  <insert id="insert" parameterType="cn.crap.model.User" >
     insert into user (id, userName, password,
-      trueName, roleId, roleName, 
-      auth, authName, createTime, 
-      status, sequence, type, 
-      email, avatarUrl, loginType, 
-      thirdlyId, passwordSalt)
-    values (#{id,jdbcType=VARCHAR}, #{userName,jdbcType=VARCHAR}, #{password,jdbcType=VARCHAR}, 
-      #{trueName,jdbcType=VARCHAR}, #{roleId,jdbcType=VARCHAR}, #{roleName,jdbcType=VARCHAR}, 
-      #{auth,jdbcType=VARCHAR}, #{authName,jdbcType=VARCHAR}, #{createTime,jdbcType=TIMESTAMP}, 
-      #{status,jdbcType=TINYINT}, #{sequence,jdbcType=INTEGER}, #{type,jdbcType=TINYINT}, 
-      #{email,jdbcType=VARCHAR}, #{avatarUrl,jdbcType=VARCHAR}, #{loginType,jdbcType=INTEGER}, 
-      #{thirdlyId,jdbcType=VARCHAR}, #{passwordSalt,jdbcType=VARCHAR})
+    trueName, roleId, roleName,
+    auth, authName, createTime,
+    status, sequence, type,
+    email, avatarUrl, loginType,
+    thirdlyId, passwordSalt)
+    values (#{id,jdbcType=VARCHAR}, #{userName,jdbcType=VARCHAR}, #{password,jdbcType=VARCHAR},
+    #{trueName,jdbcType=VARCHAR}, #{roleId,jdbcType=VARCHAR}, #{roleName,jdbcType=VARCHAR},
+    #{auth,jdbcType=VARCHAR}, #{authName,jdbcType=VARCHAR}, #{createTime,jdbcType=TIMESTAMP},
+    #{status,jdbcType=TINYINT}, #{sequence,jdbcType=INTEGER}, #{type,jdbcType=TINYINT},
+    #{email,jdbcType=VARCHAR}, #{avatarUrl,jdbcType=VARCHAR}, #{loginType,jdbcType=INTEGER},
+    #{thirdlyId,jdbcType=VARCHAR}, #{passwordSalt,jdbcType=VARCHAR})
   </insert>
-  <insert id="insertSelective" parameterType="cn.crap.model.mybatis.User" >
+  <insert id="insertSelective" parameterType="cn.crap.model.User" >
     insert into user
     <trim prefix="(" suffix=")" suffixOverrides="," >
       id,
@@ -239,7 +239,7 @@
       </if>
     </trim>
   </insert>
-  <select id="countByExample" parameterType="cn.crap.model.mybatis.UserCriteria" resultType="java.lang.Integer" >
+  <select id="countByExample" parameterType="cn.crap.model.UserCriteria" resultType="java.lang.Integer" >
     select count(*) from user
     <if test="_parameter != null" >
       <include refid="Example_Where_Clause" />
@@ -307,27 +307,27 @@
   <update id="updateByExample" parameterType="map" >
     update user
     set id = #{record.id,jdbcType=VARCHAR},
-      userName = #{record.userName,jdbcType=VARCHAR},
-      password = #{record.password,jdbcType=VARCHAR},
-      trueName = #{record.trueName,jdbcType=VARCHAR},
-      roleId = #{record.roleId,jdbcType=VARCHAR},
-      roleName = #{record.roleName,jdbcType=VARCHAR},
-      auth = #{record.auth,jdbcType=VARCHAR},
-      authName = #{record.authName,jdbcType=VARCHAR},
-      createTime = #{record.createTime,jdbcType=TIMESTAMP},
-      status = #{record.status,jdbcType=TINYINT},
-      sequence = #{record.sequence,jdbcType=INTEGER},
-      type = #{record.type,jdbcType=TINYINT},
-      email = #{record.email,jdbcType=VARCHAR},
-      avatarUrl = #{record.avatarUrl,jdbcType=VARCHAR},
-      loginType = #{record.loginType,jdbcType=INTEGER},
-      thirdlyId = #{record.thirdlyId,jdbcType=VARCHAR},
-      passwordSalt = #{record.passwordSalt,jdbcType=VARCHAR}
+    userName = #{record.userName,jdbcType=VARCHAR},
+    password = #{record.password,jdbcType=VARCHAR},
+    trueName = #{record.trueName,jdbcType=VARCHAR},
+    roleId = #{record.roleId,jdbcType=VARCHAR},
+    roleName = #{record.roleName,jdbcType=VARCHAR},
+    auth = #{record.auth,jdbcType=VARCHAR},
+    authName = #{record.authName,jdbcType=VARCHAR},
+    createTime = #{record.createTime,jdbcType=TIMESTAMP},
+    status = #{record.status,jdbcType=TINYINT},
+    sequence = #{record.sequence,jdbcType=INTEGER},
+    type = #{record.type,jdbcType=TINYINT},
+    email = #{record.email,jdbcType=VARCHAR},
+    avatarUrl = #{record.avatarUrl,jdbcType=VARCHAR},
+    loginType = #{record.loginType,jdbcType=INTEGER},
+    thirdlyId = #{record.thirdlyId,jdbcType=VARCHAR},
+    passwordSalt = #{record.passwordSalt,jdbcType=VARCHAR}
     <if test="_parameter != null" >
       <include refid="Update_By_Example_Where_Clause" />
     </if>
   </update>
-  <update id="updateByPrimaryKeySelective" parameterType="cn.crap.model.mybatis.User" >
+  <update id="updateByPrimaryKeySelective" parameterType="cn.crap.model.User" >
     update user
     <set >
       <if test="userName != null" >
@@ -381,24 +381,24 @@
     </set>
     where id = #{id,jdbcType=VARCHAR}
   </update>
-  <update id="updateByPrimaryKey" parameterType="cn.crap.model.mybatis.User" >
+  <update id="updateByPrimaryKey" parameterType="cn.crap.model.User" >
     update user
     set userName = #{userName,jdbcType=VARCHAR},
-      password = #{password,jdbcType=VARCHAR},
-      trueName = #{trueName,jdbcType=VARCHAR},
-      roleId = #{roleId,jdbcType=VARCHAR},
-      roleName = #{roleName,jdbcType=VARCHAR},
-      auth = #{auth,jdbcType=VARCHAR},
-      authName = #{authName,jdbcType=VARCHAR},
-      createTime = #{createTime,jdbcType=TIMESTAMP},
-      status = #{status,jdbcType=TINYINT},
-      sequence = #{sequence,jdbcType=INTEGER},
-      type = #{type,jdbcType=TINYINT},
-      email = #{email,jdbcType=VARCHAR},
-      avatarUrl = #{avatarUrl,jdbcType=VARCHAR},
-      loginType = #{loginType,jdbcType=INTEGER},
-      thirdlyId = #{thirdlyId,jdbcType=VARCHAR},
-      passwordSalt = #{passwordSalt,jdbcType=VARCHAR}
+    password = #{password,jdbcType=VARCHAR},
+    trueName = #{trueName,jdbcType=VARCHAR},
+    roleId = #{roleId,jdbcType=VARCHAR},
+    roleName = #{roleName,jdbcType=VARCHAR},
+    auth = #{auth,jdbcType=VARCHAR},
+    authName = #{authName,jdbcType=VARCHAR},
+    createTime = #{createTime,jdbcType=TIMESTAMP},
+    status = #{status,jdbcType=TINYINT},
+    sequence = #{sequence,jdbcType=INTEGER},
+    type = #{type,jdbcType=TINYINT},
+    email = #{email,jdbcType=VARCHAR},
+    avatarUrl = #{avatarUrl,jdbcType=VARCHAR},
+    loginType = #{loginType,jdbcType=INTEGER},
+    thirdlyId = #{thirdlyId,jdbcType=VARCHAR},
+    passwordSalt = #{passwordSalt,jdbcType=VARCHAR}
     where id = #{id,jdbcType=VARCHAR}
   </update>
 </mapper>

@@ -1,5 +1,6 @@
 package cn.crap.controller.user;
 
+import cn.crap.beans.Config;
 import cn.crap.dto.FindPwdDto;
 import cn.crap.dto.LoginDto;
 import cn.crap.dto.LoginInfoDto;
@@ -11,15 +12,10 @@ import cn.crap.framework.MyException;
 import cn.crap.framework.ThreadContext;
 import cn.crap.framework.base.BaseController;
 import cn.crap.framework.interceptor.AuthPassport;
-import cn.crap.model.mybatis.User;
-import cn.crap.model.mybatis.UserCriteria;
-import cn.crap.service.IEmailService;
-import cn.crap.service.custom.CustomProjectService;
-import cn.crap.service.custom.CustomUserService;
-import cn.crap.service.mybatis.ProjectUserService;
-import cn.crap.service.mybatis.RoleService;
-import cn.crap.service.mybatis.UserService;
-import cn.crap.beans.Config;
+import cn.crap.model.User;
+import cn.crap.model.UserCriteria;
+import cn.crap.query.UserQuery;
+import cn.crap.service.*;
 import cn.crap.utils.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -45,11 +41,11 @@ public class LoginController extends BaseController{
 	@Autowired
 	private UserService userService;
 	@Autowired
-	private CustomUserService customUserService;
+	private UserService customUserService;
 	@Autowired
 	private Config config;
 	@Autowired
-	private CustomProjectService customProjectService;
+	private ProjectService projectService;
 	@Autowired
 	private ProjectUserService projectUserService;
 	@Autowired
@@ -112,7 +108,7 @@ public class LoginController extends BaseController{
 	 * @throws UnsupportedEncodingException 
 	 */
 	@RequestMapping("/back/validateEmail.do")
-	public String validateEmail(@RequestParam String i) throws UnsupportedEncodingException, MessagingException {
+	public String validateEmail(@RequestParam String i) throws UnsupportedEncodingException, MessagingException, MyException {
 		HttpServletRequest request = ThreadContext.request();
 		String id =  Aes.desEncrypt(i);
 		String code = stringCache.get(i);
@@ -124,7 +120,7 @@ public class LoginController extends BaseController{
 			if(user.getId() != null){
 				user.setStatus( Byte.valueOf("2") );
 				userService.update(user);
-				userCache.add(user.getId(), new LoginInfoDto(user, roleService, customProjectService, projectUserService));
+				userCache.add(user.getId(), new LoginInfoDto(user, roleService, projectService, projectUserService));
 				request.setAttribute("title", "恭喜，操作成功！");
 				request.setAttribute("result", "验证通过！");
 			}else{
@@ -165,10 +161,9 @@ public class LoginController extends BaseController{
 			throw new MyException(MyError.E000010);
 		}
 
-		UserCriteria example = new UserCriteria();
-		example.createCriteria().andEmailEqualTo(email).andLoginTypeEqualTo(LoginType.COMMON.getValue());
+		UserQuery query = new UserQuery().setEqualEmail(email).setLoginType(LoginType.COMMON.getValue());
 
-		List<User> user = userService.selectByExample(example);
+		List<User> user = userService.query(query);
 		if(user.size()!=1){
 			throw new MyException(MyError.E000030);
 		}
@@ -194,10 +189,9 @@ public class LoginController extends BaseController{
 			throw new MyException(MyError.E000031);
 		}
 
-		UserCriteria example = new UserCriteria();
-		example.createCriteria().andEmailEqualTo(findPwdDto.getEmail()).andLoginTypeEqualTo(LoginType.COMMON.getValue());
+        UserQuery query = new UserQuery().setEqualEmail(findPwdDto.getEmail()).setLoginType(LoginType.COMMON.getValue());
 
-		List<User> users = userService.selectByExample(example);
+		List<User> users = userService.query(query);
 		if(users.size()!=1){
 			throw new MyException(MyError.E000030);
 		}
@@ -236,10 +230,8 @@ public class LoginController extends BaseController{
 			}
 		}
 
-		UserCriteria example = new UserCriteria();
-		example.createCriteria().andEmailEqualTo(model.getUserName().toLowerCase());
-
-		if( userService.countByExample(example) >0 ){
+        UserQuery query = new UserQuery().setEqualEmail(model.getUserName().toLowerCase());
+		if( userService.count(query) >0 ){
 			model.setTipMessage("邮箱已经注册");
 			return new JsonResult(1, model);
 		}
@@ -248,10 +240,9 @@ public class LoginController extends BaseController{
 		try{
 			user.setUserName(model.getUserName().split("@")[0]);
 			// 判断用户名是否重名，重名则修改昵称
-			example = new UserCriteria();
-			example.createCriteria().andUserNameEqualTo(model.getUserName());
+            query = new UserQuery().setEqualUserName(model.getUserName());
 
-			if( userService.countByExample(example) >0 ){
+			if( userService.count(query) >0 ){
 				user.setUserName("ca_"+ model.getUserName().split("@")[0]+"_"+Tools.getChar(5));
 			}
 			
@@ -302,13 +293,12 @@ public class LoginController extends BaseController{
 			// 只允许普通账号方式登陆，第三方绑定必须通过设置密码，并且没有重复的账号、邮箱才能登陆
 			List<User> users = null;
 			if(model.getUserName().indexOf("@")>0){ // 用户名中不允许有@符号，有@符号代表邮箱登陆
-				UserCriteria example = new UserCriteria();
-				example.createCriteria().andEmailEqualTo(model.getUserName()).andLoginTypeEqualTo(LoginType.COMMON.getValue());
-				users =  userService.selectByExample(example);
+				UserQuery query = new UserQuery().setEqualEmail(model.getUserName()).setLoginType(LoginType.COMMON.getValue());
+				users = userService.query(query);
 			}else{
 				UserCriteria example = new UserCriteria();
-				example.createCriteria().andUserNameEqualTo(model.getUserName()).andLoginTypeEqualTo(LoginType.COMMON.getValue());
-				users =  userService.selectByExample(example);
+				UserQuery query = new UserQuery().setEqualUserName(model.getUserName()).setLoginType(LoginType.COMMON.getValue());
+				users =  userService.query(query);
 			}
 			
 			if (users.size() == 1) {

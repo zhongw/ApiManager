@@ -1,6 +1,7 @@
 package cn.crap.controller.user;
 
 import cn.crap.adapter.InterfaceAdapter;
+import cn.crap.beans.Config;
 import cn.crap.dto.InterfaceDto;
 import cn.crap.dto.LoginInfoDto;
 import cn.crap.dto.SearchDto;
@@ -10,14 +11,19 @@ import cn.crap.framework.JsonResult;
 import cn.crap.framework.MyException;
 import cn.crap.framework.base.BaseController;
 import cn.crap.framework.interceptor.AuthPassport;
-import cn.crap.model.mybatis.Error;
-import cn.crap.model.mybatis.*;
+import cn.crap.model.Error;
+import cn.crap.model.InterfaceWithBLOBs;
+import cn.crap.model.Module;
+import cn.crap.model.Project;
+import cn.crap.query.ErrorQuery;
+import cn.crap.query.InterfaceQuery;
+import cn.crap.service.ErrorService;
 import cn.crap.service.ISearchService;
-import cn.crap.service.custom.CustomErrorService;
-import cn.crap.service.custom.CustomInterfaceService;
-import cn.crap.service.mybatis.InterfaceService;
-import cn.crap.beans.Config;
-import cn.crap.utils.*;
+import cn.crap.service.InterfaceService;
+import cn.crap.utils.LoginUserHelper;
+import cn.crap.utils.MyString;
+import cn.crap.utils.Page;
+import cn.crap.utils.Tools;
 import net.sf.json.JSONArray;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -28,7 +34,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.io.IOException;
-import java.util.Date;
 import java.util.List;
 
 @Controller
@@ -36,13 +41,11 @@ import java.util.List;
 public class InterfaceController extends BaseController{
 
 	@Autowired
-	private CustomInterfaceService customInterfaceService;
-	@Autowired
-	private InterfaceService mybatisInterfaceService;
+	private InterfaceService interfaceService;
 	@Autowired
 	private ISearchService luceneService;
 	@Autowired
-	private CustomErrorService customErrorService;
+	private ErrorService errorService;
 	@Autowired
 	private Config config;
 	
@@ -52,20 +55,16 @@ public class InterfaceController extends BaseController{
 	@AuthPassport
 	public JsonResult list(@RequestParam String moduleId, String interfaceName, String url,
 			 Integer currentPage) throws MyException{
-		Page page= new Page(currentPage);
-		checkUserPermissionByModuleId(moduleId, VIEW);
+		InterfaceQuery interfaceQuery = new InterfaceQuery();
+		interfaceQuery.setModuleId(moduleId).setInterfaceName(interfaceName).setFullUrl(url).setCurrentPage(currentPage);
+		Page page= new Page(interfaceQuery);
 
-		InterfaceCriteria example = new InterfaceCriteria();
-		InterfaceCriteria.Criteria criteria = example.createCriteria().andModuleIdEqualTo(moduleId);
-		if (!MyString.isEmpty(interfaceName)){
-			criteria.andInterfaceNameLike("%" + interfaceName + "%");
-		}
-		if (!MyString.isEmpty(url)){
-			criteria.andFullUrlLike("%" + url + "%");
-		}
+		Module module = moduleCache.get(moduleId);
+		Project project = projectCache.get(module.getProjectId());
+		checkUserPermissionByProject(project.getId(), VIEW);
 
-		List<InterfaceDto> interfaces = InterfaceAdapter.getDto(mybatisInterfaceService.selectByExampleWithBLOBs(example), null);
-        page.setAllRow(mybatisInterfaceService.countByExample(example));
+		List<InterfaceDto> interfaces = InterfaceAdapter.getDto(interfaceService.query(interfaceQuery), module, project);
+		page.setAllRow(interfaceService.count(interfaceQuery));
 		JsonResult result = new JsonResult(1, interfaces, page);
 		result.putOthers("crumbs", Tools.getCrumbs("接口列表:"+ moduleCache.get(moduleId).getName(),"void"))
 				.putOthers("module", moduleCache.get(moduleId));
@@ -80,7 +79,7 @@ public class InterfaceController extends BaseController{
 		InterfaceWithBLOBs model;
 		Module module = null;
 		if(id != null){
-			model= mybatisInterfaceService.getById(id);
+			model= interfaceService.getById(id);
 			module = moduleCache.get(model.getModuleId());
 			checkUserPermissionByProject(model.getProjectId(), VIEW);
 		}else{
@@ -93,7 +92,7 @@ public class InterfaceController extends BaseController{
 			model.setHeader("[]");
 			model.setParamRemark("[]");
 			if(!MyString.isEmpty(module.getTemplateId())){
-				InterfaceWithBLOBs template = mybatisInterfaceService.getById(module.getTemplateId());
+				InterfaceWithBLOBs template = interfaceService.getById(module.getTemplateId());
 				// 根据模板初始化接口
 				if(template != null){
 					model.setHeader(template.getHeader());
@@ -111,7 +110,7 @@ public class InterfaceController extends BaseController{
 				}
 			}
 		}
-		return new JsonResult(1, InterfaceAdapter.getDto(model, module, false));
+		return new JsonResult(1, InterfaceAdapter.getDto(model, module, null, false));
 	}
 	
 	/**
@@ -128,17 +127,16 @@ public class InterfaceController extends BaseController{
 		Module module = moduleCache.get(interFace.getModuleId());
 
 		if(!config.isCanRepeatUrl()){
-			InterfaceCriteria example = new InterfaceCriteria();
-			InterfaceCriteria.Criteria criteria = example.createCriteria();
-			criteria.andModuleIdEqualTo(interFace.getModuleId()).andFullUrlEqualTo(module.getUrl() + interFace.getUrl());
-			if (mybatisInterfaceService.countByExample(example) > 0){
+			if (interfaceService.count(new InterfaceQuery().setModuleId(interFace.getModuleId()).setEqualFullUrl(module.getUrl() + interFace.getUrl())) > 0){
 				throw new MyException(MyError.E000004);
 			}
 		}
 		interFace.setId(null);
 		interFace.setFullUrl(module.getUrl() + interFace.getUrl());
-		mybatisInterfaceService.insert(InterfaceAdapter.getModel(interFace));
+        InterfaceWithBLOBs model = InterfaceAdapter.getModel(interFace);
+        interfaceService.insert(model);
 
+        interFace.setId(model.getId());
 		luceneService.add(InterfaceAdapter.getSearchDto(interFace));
 		return new JsonResult(1, interFace);
 	}
@@ -152,7 +150,7 @@ public class InterfaceController extends BaseController{
 	@ResponseBody
 	@AuthPassport
 	public JsonResult getRequestExam(@ModelAttribute InterfaceDto interFace) {
-		customInterfaceService.getInterFaceRequestExam(interFace);
+		interfaceService.getInterFaceRequestExam(interFace);
 		return new JsonResult(1, interFace);
 	}
 
@@ -170,8 +168,9 @@ public class InterfaceController extends BaseController{
 		/**
 		 * 根据选着的错误码id，组装json字符串
 		 */
-		String errorIds = interFace.getErrorList();
-		List<Error> errors  = customErrorService.queryByProjectIdAndErrorCode(interFace.getProjectId(), Tools.getIdsFromField(errorIds));
+        ErrorQuery query = new ErrorQuery().setProjectId(interFace.getProjectId())
+                .setErrorCodeList(Tools.getIdsFromField(interFace.getErrorList())).setPageSize(100);
+        List<Error> errors  = errorService.query(query);
 		interFace.setErrors(JSONArray.fromObject(errors).toString());
 
 		LoginInfoDto user = LoginUserHelper.getUser();
@@ -179,7 +178,7 @@ public class InterfaceController extends BaseController{
 
 		//请求示例为空，则自动添加
 		if(MyString.isEmpty(interFace.getRequestExam())){
-			customInterfaceService.getInterFaceRequestExam(interFace);
+			interfaceService.getInterFaceRequestExam(interFace);
 		}
         interFace.setMonitorType(MonitorType.No.getValue());
 		//检查邮件格式是否正确
@@ -197,7 +196,7 @@ public class InterfaceController extends BaseController{
 
 		Module module = moduleCache.get(interFace.getModuleId());
 		if (!MyString.isEmpty(interFace.getId())) {
-			String oldModuleId = mybatisInterfaceService.getById(interFace.getId()).getModuleId();
+			String oldModuleId = interfaceService.getById(interFace.getId()).getModuleId();
 			String projectId = moduleCache.get(oldModuleId).getProjectId();
 			Project project = projectCache.get(interFace.getProjectId() );
 
@@ -209,13 +208,14 @@ public class InterfaceController extends BaseController{
 			checkUserPermissionByProject(project, MOD_INTER);
 			
 			//同一模块下不允许 url 重复
-			if( !config.isCanRepeatUrl() && customInterfaceService.countByFullUrl(interFace.getModuleId(),
-					module.getUrl() +interFace.getUrl(), interFace.getId()) >0 ){
+            InterfaceQuery interfaceQuery = new InterfaceQuery();
+            interfaceQuery.setModuleId(interFace.getModuleId()).setFullUrl(module.getUrl() +interFace.getUrl()).setExceptId(interFace.getId());
+			if( !config.isCanRepeatUrl() && interfaceService.count(interfaceQuery) >0 ){
 				throw new MyException(MyError.E000004);
 			}
 			
 			interFace.setFullUrl(module.getUrl() + interFace.getUrl());
-			customInterfaceService.update(InterfaceAdapter.getModel(interFace), "接口", "");
+			interfaceService.update(InterfaceAdapter.getModel(interFace), "接口", "");
 			if(interFace.getId().equals(interFace.getProjectId())){
 				throw new MyException(MyError.E000027);
 			}
@@ -223,11 +223,16 @@ public class InterfaceController extends BaseController{
 			
 		} else {
 			checkUserPermissionByProject(projectCache.get(interFace.getProjectId() ), ADD_INTER);
-			if(!config.isCanRepeatUrl() && customInterfaceService.countByFullUrl(interFace.getModuleId(),module.getUrl() + interFace.getUrl(), null)>0){
+            InterfaceQuery interfaceQuery = new InterfaceQuery();
+            interfaceQuery.setModuleId(interFace.getModuleId()).setFullUrl(module.getUrl() +interFace.getUrl());
+			if(!config.isCanRepeatUrl() && interfaceService.count(interfaceQuery)>0){
 				return new JsonResult(MyError.E000004);
 			}
 			interFace.setFullUrl(module.getUrl() + interFace.getUrl());
-			mybatisInterfaceService.insert(InterfaceAdapter.getModel(interFace));
+			InterfaceWithBLOBs model = InterfaceAdapter.getModel(interFace);
+			interfaceService.insert(model);
+
+			interFace.setId(model.getId());
 			luceneService.add(InterfaceAdapter.getSearchDto(interFace));
 		}
 		return new JsonResult(1, interFace);
@@ -247,9 +252,9 @@ public class InterfaceController extends BaseController{
 			if(MyString.isEmpty(tempId)){
 				continue;
 			}
-			InterfaceWithBLOBs interFace = mybatisInterfaceService.getById( tempId );
+			InterfaceWithBLOBs interFace = interfaceService.getById( tempId );
 			checkUserPermissionByProject(interFace.getProjectId(), DEL_INTER);
-			customInterfaceService.delete(interFace.getId(), "接口", "");
+			interfaceService.delete(interFace.getId(), "接口", "");
 			luceneService.delete(new SearchDto(interFace.getId()));
 		}
 		return new JsonResult(1, null);
@@ -258,8 +263,8 @@ public class InterfaceController extends BaseController{
 	@RequestMapping("/changeSequence.do")
 	@ResponseBody
 	public JsonResult changeSequence(@RequestParam String id,@RequestParam String changeId) throws MyException {
-		InterfaceWithBLOBs change = mybatisInterfaceService.getById(changeId);
-		InterfaceWithBLOBs model = mybatisInterfaceService.getById(id);
+		InterfaceWithBLOBs change = interfaceService.getById(changeId);
+		InterfaceWithBLOBs model = interfaceService.getById(id);
 		checkUserPermissionByProject(model.getProjectId(), MOD_INTER);
 		checkUserPermissionByProject(change.getProjectId(), MOD_INTER);
 		
@@ -268,8 +273,8 @@ public class InterfaceController extends BaseController{
 		model.setSequence(change.getSequence());
 		change.setSequence(modelSequence);
 
-		mybatisInterfaceService.update(model);
-		mybatisInterfaceService.update(change);
+		interfaceService.update(model);
+		interfaceService.update(change);
 		return new JsonResult(1, null);
 	}
 }

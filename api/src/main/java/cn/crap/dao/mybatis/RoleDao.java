@@ -1,12 +1,13 @@
 package cn.crap.dao.mybatis;
 
-import cn.crap.model.mybatis.Role;
-import cn.crap.model.mybatis.RoleCriteria;
-import cn.crap.model.mybatis.RoleWithBLOBs;
-import java.util.List;
+import cn.crap.model.Role;
+import cn.crap.model.RoleCriteria;
+import cn.crap.model.RoleWithBLOBs;
 import org.apache.ibatis.annotations.Param;
 
-public interface RoleDao {
+import java.util.List;
+
+public interface RoleDao extends BaseDao<RoleWithBLOBs>{
     int countByExample(RoleCriteria example);
 
     int deleteByExample(RoleCriteria example);

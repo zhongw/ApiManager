@@ -11,13 +11,13 @@ import cn.crap.framework.JsonResult;
 import cn.crap.framework.MyException;
 import cn.crap.framework.base.BaseController;
 import cn.crap.framework.interceptor.AuthPassport;
-import cn.crap.model.mybatis.User;
-import cn.crap.model.mybatis.UserCriteria;
-import cn.crap.service.custom.CustomProjectService;
-import cn.crap.service.custom.CustomUserService;
-import cn.crap.service.mybatis.ProjectUserService;
-import cn.crap.service.mybatis.RoleService;
-import cn.crap.service.mybatis.UserService;
+import cn.crap.model.User;
+import cn.crap.model.UserCriteria;
+import cn.crap.query.UserQuery;
+import cn.crap.service.ProjectService;
+import cn.crap.service.ProjectUserService;
+import cn.crap.service.RoleService;
+import cn.crap.service.UserService;
 import cn.crap.utils.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -34,35 +34,20 @@ public class UserController extends BaseController {
     @Autowired
     private UserService userService;
     @Autowired
-    private CustomProjectService customProjectService;
+    private ProjectService projectService;
     @Autowired
     private ProjectUserService projectUserService;
     @Autowired
-    private CustomUserService customUserService;
+    private UserService customUserService;
 
     @RequestMapping("/user/list.do")
     @ResponseBody
     @AuthPassport(authority = C_AUTH_USER)
-    public JsonResult list(String userName, String email, String trueName, Integer currentPage) {
-        Page page = new Page(currentPage);
-        UserCriteria userCriteria = new UserCriteria();
-        UserCriteria.Criteria criteria = userCriteria.createCriteria();
+    public JsonResult list(@ModelAttribute UserQuery query) throws MyException{
+        Page page = new Page(query);
 
-        if (userName != null){
-            criteria.andUserNameLike("%" + userName +"%");
-        }
-        if (trueName != null){
-            criteria.andTrueNameLike("%" + trueName+"%");
-        }
-        if (email != null){
-            criteria.andEmailLike("%" + email+"%");
-        }
-        userCriteria.setOrderByClause(TableField.SORT.SEQUENCE_DESC);
-        userCriteria.setLimitStart(page.getStart());
-        userCriteria.setMaxResults(page.getSize());
-
-        page.setAllRow(userService.countByExample(userCriteria));
-        return new JsonResult(1, UserAdapter.getDto(userService.selectByExample(userCriteria)), page);
+        page.setAllRow(userService.count(query));
+        return new JsonResult(1, UserAdapter.getDto(userService.query(query)), page);
     }
 
     @RequestMapping("/user/detail.do")
@@ -102,9 +87,8 @@ public class UserController extends BaseController {
         }
 
         // 判断是否重名
-        UserCriteria userCriteria = new UserCriteria();
-        UserCriteria.Criteria criteria = userCriteria.createCriteria().andUserNameEqualTo(user.getUserName());
-        int userSize = userService.countByExample(userCriteria);
+        UserQuery query = new UserQuery().setEqualUserName(user.getUserName()).setPageSize(1);
+        int userSize = userService.count(query);
         if (userSize > 0) {
             throw new MyException(MyError.E000015);
         }
@@ -181,8 +165,9 @@ public class UserController extends BaseController {
         // 修改了用户邮箱，状态修改改为为验证
         if (MyString.isEmpty(dbUser.getEmail()) || !user.getEmail().equals(dbUser.getEmail())) {
             user.setStatus(UserStatus.INVALID.getType());
-            user.setEmail(user.getEmail());
-            userCache.add(user.getId(), new LoginInfoDto(user, roleService, customProjectService, projectUserService));
+            dbUser.setEmail(user.getEmail());
+            dbUser.setStatus(UserStatus.INVALID.getType());
+            userCache.add(user.getId(), new LoginInfoDto(dbUser, roleService, projectService, projectUserService));
         }
 
         // 如果前端设置了密码，则修改密码，否者使用旧密码，登陆类型设置为允许普通登陆

@@ -5,14 +5,14 @@ import cn.crap.dto.SourceDto;
 import cn.crap.enumer.LuceneSearchType;
 import cn.crap.enumer.ProjectType;
 import cn.crap.framework.SpringContextHolder;
-import cn.crap.model.mybatis.Module;
-import cn.crap.model.mybatis.Project;
-import cn.crap.model.mybatis.Source;
+import cn.crap.model.Module;
+import cn.crap.model.Project;
+import cn.crap.model.Source;
 import cn.crap.service.tool.ProjectCache;
+import cn.crap.utils.BeanUtil;
 import cn.crap.utils.DateFormartUtil;
 import cn.crap.utils.GetTextFromFile;
 import cn.crap.utils.MyString;
-import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,14 +30,7 @@ public class SourceAdapter {
         }
 
         SourceDto dto = new SourceDto();
-        dto.setId(model.getId());
-		dto.setSequence(model.getSequence());
-		dto.setStatus(model.getStatus());
-		dto.setName(model.getName());
-		dto.setModuleId(model.getModuleId());
-		dto.setRemark(model.getRemark());
-		dto.setFilePath(model.getFilePath());
-		dto.setProjectId(model.getProjectId());
+        BeanUtil.copyProperties(model, dto);
         if (model.getCreateTime() != null) {
             dto.setCreateTimeStr(DateFormartUtil.getDateByTimeMillis(model.getCreateTime().getTime()));
         }
@@ -104,7 +97,7 @@ public class SourceAdapter {
         dto.setCreateTime(source.getCreateTime());
         dto.setTitle(source.getName());
         dto.setType(Source.class.getSimpleName());
-        dto.setUrl("#/"+source.getProjectId()+"/source/detail/"+source.getId());
+        dto.setUrl("#/source/detail?projectId=" +source.getProjectId()+ "&id=" + source.getId());
         dto.setVersion("");
         dto.setProjectId(source.getProjectId());
         //索引内容 = 备注内容 + 文档内容
@@ -121,12 +114,12 @@ public class SourceAdapter {
         }
         ProjectCache projectCache = SpringContextHolder.getBean("projectCache", ProjectCache.class);
         Project project = projectCache.get(source.getProjectId());
+
+        if(LuceneSearchType.Yes.getByteValue().equals(project.getLuceneSearch())){
+            dto.setNeedCreateIndex(true);
+        }
         // 私有项目不能建立索引
         if(project.getType() == ProjectType.PRIVATE.getType()){
-            dto.setNeedCreateIndex(false);
-        }
-
-        if(LuceneSearchType.No.getByteValue().equals(project.getLuceneSearch())){
             dto.setNeedCreateIndex(false);
         }
         return dto;

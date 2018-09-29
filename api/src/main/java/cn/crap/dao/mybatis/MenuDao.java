@@ -1,11 +1,12 @@
 package cn.crap.dao.mybatis;
 
-import cn.crap.model.mybatis.Menu;
-import cn.crap.model.mybatis.MenuCriteria;
-import java.util.List;
+import cn.crap.model.Menu;
+import cn.crap.model.MenuCriteria;
 import org.apache.ibatis.annotations.Param;
 
-public interface MenuDao {
+import java.util.List;
+
+public interface MenuDao extends BaseDao<Menu>{
     int countByExample(MenuCriteria example);
 
     int deleteByExample(MenuCriteria example);

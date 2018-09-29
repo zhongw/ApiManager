@@ -4,20 +4,20 @@ import cn.crap.adapter.Adapter;
 import cn.crap.adapter.ModuleAdapter;
 import cn.crap.dto.LoginInfoDto;
 import cn.crap.dto.ModuleDto;
-import cn.crap.dto.UserDto;
 import cn.crap.enumer.ArticleType;
 import cn.crap.enumer.LogType;
 import cn.crap.enumer.MyError;
+import cn.crap.enumer.SettingEnum;
 import cn.crap.framework.JsonResult;
 import cn.crap.framework.MyException;
 import cn.crap.framework.base.BaseController;
 import cn.crap.framework.interceptor.AuthPassport;
-import cn.crap.model.mybatis.InterfaceWithBLOBs;
-import cn.crap.model.mybatis.Log;
-import cn.crap.model.mybatis.Module;
-import cn.crap.model.mybatis.Project;
-import cn.crap.service.custom.*;
-import cn.crap.service.mybatis.*;
+import cn.crap.model.*;
+import cn.crap.query.ArticleQuery;
+import cn.crap.query.InterfaceQuery;
+import cn.crap.query.ModuleQuery;
+import cn.crap.query.SourceQuery;
+import cn.crap.service.*;
 import cn.crap.utils.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -27,42 +27,43 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.util.List;
+
 @Controller
 @RequestMapping("/user/module")
 public class ModuleController extends BaseController implements ILogConst{
 
 	@Autowired
-	private ModuleService moduleService;
-	@Autowired
 	private RoleService roleService;
 	@Autowired
-	private CustomArticleService articleService;
+	private ArticleService articleService;
 	@Autowired
-	private InterfaceService interfaceService;
-	@Autowired
-	private CustomProjectService customProjectService;
+	private ProjectService projectService;
 	@Autowired
 	private ProjectUserService projectUserService;
 	@Autowired
-	private CustomSourceService customSourceService;
+	private SourceService sourceService;
 	@Autowired
 	private UserService userService;
 	@Autowired
-	private CustomModuleService customModuleService;
+	private ModuleService moduleService;
 	@Autowired
 	private LogService logService;
 	@Autowired
-	private CustomInterfaceService customInterfaceService;
+	private InterfaceService interfaceService;
 	
 	
 	@RequestMapping("/list.do")
 	@ResponseBody
-	public JsonResult list(@RequestParam String projectId, @RequestParam(defaultValue="1") int currentPage, String name) throws MyException{
-			Page<Module> page= new Page(currentPage);
-			checkUserPermissionByProject(projectId, VIEW);
+	public JsonResult list(@ModelAttribute ModuleQuery query) throws MyException{
+			throwExceptionWhenIsNull(query.getProjectId(), "projectId");
+			Page page= new Page(query);
+			Project project = projectCache.get(query.getProjectId());
+			checkUserPermissionByProject(project, VIEW);
 
-			page = customModuleService.queryByProjectId(projectId, name, page);
-			return new JsonResult(1, ModuleAdapter.getDto(page.getList()), page);
+            List<ModuleDto> moduleDtos = ModuleAdapter.getDto(moduleService.query(query), project);
+            page.setAllRow(moduleService.count(query));
+            return new JsonResult().data(moduleDtos).page(page);
 		}
 
 	@RequestMapping("/detail.do")
@@ -70,10 +71,15 @@ public class ModuleController extends BaseController implements ILogConst{
 	public JsonResult detail(String id, String projectId) throws MyException{
 		Module module;
         Project project;
+		Interface templeteInterface = null;
 		if(id != null){
 			module= moduleService.getById(id);
 			project = projectCache.get(module.getProjectId());
 			checkUserPermissionByProject(project, VIEW);
+
+            if (module.getTemplateId() != null) {
+                templeteInterface = interfaceService.getById(module.getTemplateId());
+            }
 		}else{
 		    project = projectCache.get(projectId);
 			checkUserPermissionByProject(project, VIEW);
@@ -81,7 +87,7 @@ public class ModuleController extends BaseController implements ILogConst{
 			module.setStatus(Byte.valueOf("1"));
 			module.setProjectId(projectId);
 		}
-		return new JsonResult(1, ModuleAdapter.getDto(module, project));
+		return new JsonResult(1, ModuleAdapter.getDto(module, project, templeteInterface));
 	}
 
 	/**
@@ -111,19 +117,19 @@ public class ModuleController extends BaseController implements ILogConst{
 		if(id != null){
 			checkUserPermissionByModuleId(id, MOD_MODULE);
 
-            Module dbModule = moduleService.getById(module.getId());
-            Log log = Adapter.getLog(dbModule.getId(), L_MODULE_CHINESE, dbModule.getName(), LogType.UPDATE, dbModule.getClass(), dbModule);
-            logService.insert(log);
-
-            moduleService.update(module);
+            moduleService.update(module, true);
             // 更新该模块下的所有接口的fullUrl
-			customInterfaceService.updateFullUrlByModuleId(module.getUrl(), id);
+			interfaceService.updateFullUrlByModuleId(module.getUrl(), id);
 		}else{
 			LoginInfoDto user = LoginUserHelper.getUser();
 			String projectId = MD5.encrytMD5(user.getId(), "").substring(0, 20) + "-debug";
 			if (projectId.equals(moduleDto.getProjectId())){
 				throw new MyException(MyError.E000067);
 			}
+			Integer maxModule = settingCache.getInteger(SettingEnum.MAX_MODULE);
+			if (moduleService.count(new ModuleQuery().setUserId(user.getId())) > maxModule){
+                throw new MyException(MyError.E000071, maxModule + "");
+            }
 			module.setProjectId(moduleDto.getProjectId());
 			checkUserPermissionByProject(module.getProjectId(), ADD_MODULE);
 			module.setUserId(LoginUserHelper.getUser().getId());
@@ -137,7 +143,7 @@ public class ModuleController extends BaseController implements ILogConst{
 		 */
 		LoginInfoDto user = LoginUserHelper.getUser();
 		// 将用户信息存入缓存
-		userCache.add(user.getId(), new LoginInfoDto(userService.getById(user.getId()), roleService, customProjectService, projectUserService));
+		userCache.add(user.getId(), new LoginInfoDto(userService.getById(user.getId()), roleService, projectService, projectUserService));
 		return new JsonResult(1,module);
 	}
 	
@@ -158,7 +164,7 @@ public class ModuleController extends BaseController implements ILogConst{
 		module.setTemplateId( inter.getIsTemplate() ? "-1" : inter.getId() );
 		moduleService.update(module);
 		
-		customInterfaceService.deleteTemplateByModuleId(module.getId());
+		interfaceService.deleteTemplateByModuleId(module.getId());
 		if(!inter.getIsTemplate()){
 			inter.setIsTemplate(true);;
 			interfaceService.update(inter);
@@ -180,19 +186,19 @@ public class ModuleController extends BaseController implements ILogConst{
 		Module dbModule = moduleCache.get(module.getId());
 		checkUserPermissionByProject(projectCache.get( dbModule.getProjectId() ), DEL_MODULE);
 		
-		if(customInterfaceService.countByModuleId(dbModule.getId()) >0 ){
+		if(interfaceService.count(new InterfaceQuery().setModuleId(dbModule.getId())) >0 ){
 			throw new MyException(MyError.E000024);
 		}
 		
-		if(articleService.countByModuleIdAndType(dbModule.getId(), ArticleType.ARTICLE.name()) >0 ){
+		if(articleService.count(new ArticleQuery().setModuleId(dbModule.getId()).setType(ArticleType.ARTICLE.name())) >0 ){
 			throw new MyException(MyError.E000034);
 		}
 		
-		if(customSourceService.countByModuleId(dbModule.getId()) >0 ){
+		if(sourceService.count(new SourceQuery().setModuleId(dbModule.getId())) >0 ){
 			throw new MyException(MyError.E000035);
 		}
 		
-		if(articleService.countByModuleIdAndType(dbModule.getId(),  ArticleType.DICTIONARY.name()) >0 ){
+		if(articleService.count(new ArticleQuery().setModuleId(dbModule.getId()).setType(ArticleType.DICTIONARY.name())) >0 ){
 			throw new MyException(MyError.E000036);
 		}
 

@@ -1,6 +1,6 @@
 package cn.crap.dao.custom;
 
-import cn.crap.model.mybatis.Project;
+import cn.crap.model.Project;
 import cn.crap.utils.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -43,7 +43,7 @@ public class CustomProjectDao {
 		params.add(userId);
 		params.add(userId);
 
-		StringBuilder sb = new StringBuilder("select id, name, type, remark, userId, createTime, cover, sequence from project where" +
+		StringBuilder sb = new StringBuilder("select id, name, type, remark, userId, createTime, cover, sequence, status from project where" +
                 " (userId= ? or id in (select projectId from project_user where userId=?))");
 		if (name != null){
 			sb.append(" and name like ? ");
@@ -62,9 +62,10 @@ public class CustomProjectDao {
 				project.setType(rs.getByte(3));
 				project.setRemark(rs.getString(4));
 				project.setUserId(rs.getString(5));
-				project.setCreateTime(rs.getTime(6));
+				project.setCreateTime(rs.getTimestamp(6));
 				project.setCover(rs.getString(7));
 				project.setSequence(rs.getInt(8));
+				project.setStatus(rs.getByte(9));
 				return project;
 			}
 		});

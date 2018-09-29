@@ -2,10 +2,12 @@ package cn.crap.controller.admin;
 
 import cn.crap.dto.LoginInfoDto;
 import cn.crap.dto.SettingDto;
+import cn.crap.enumer.SettingStatus;
 import cn.crap.framework.JsonResult;
 import cn.crap.framework.base.BaseController;
 import cn.crap.framework.interceptor.AuthPassport;
 import cn.crap.service.ISearchService;
+import cn.crap.service.SettingService;
 import cn.crap.utils.HttpPostGet;
 import cn.crap.utils.LoginUserHelper;
 import cn.crap.utils.Tools;
@@ -23,6 +25,8 @@ import java.util.Map;
 public class MainController extends BaseController {
     @Autowired
     private ISearchService luceneService;
+    @Autowired
+    private SettingService settingService;
 
     /**
      * admin dashboard
@@ -34,7 +38,7 @@ public class MainController extends BaseController {
     @RequestMapping("/admin.do")
     @AuthPassport
     public String showHomePage() throws Exception {
-        return "resources/html/backHtml/index.html";
+        return "resources/html/admin/index.html";
     }
 
     /**
@@ -79,7 +83,7 @@ public class MainController extends BaseController {
      */
     @RequestMapping("/loginOrRegister.do")
     public String loginOrRegister() throws Exception {
-        return "resources/html/backHtml/loginOrRegister.html";
+        return "resources/html/admin/loginOrRegister.html";
     }
 
 
@@ -101,13 +105,13 @@ public class MainController extends BaseController {
     @ResponseBody
     @AuthPassport
     public JsonResult init(HttpServletRequest request) throws Exception {
-        Map<String, String> settingMap = new HashMap<String, String>();
+        Map<String, String> settingMap = new HashMap<>();
         for (SettingDto setting : settingCache.getAll()) {
-            if (S_SECRETKEY.equals(setting.getKey())) {
-                continue;
+            if (SettingStatus.COMMON.getStatus().equals(setting.getStatus())) {
+                settingMap.put(setting.getKey(), setting.getValue());
             }
-            settingMap.put(setting.getKey(), setting.getValue());
         }
+
         Map<String, Object> returnMap = new HashMap<String, Object>();
         returnMap.put("settingMap", settingMap);
         LoginInfoDto user = LoginUserHelper.getUser();
@@ -116,6 +120,7 @@ public class MainController extends BaseController {
         returnMap.put("sessionAdminRoleIds", user.getRoleId());
         returnMap.put("sessionAdminId", user.getId());
         returnMap.put("errorTips", stringCache.get(C_CACHE_ERROR_TIP));
+
         return new JsonResult(1, returnMap);
     }
 

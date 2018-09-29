@@ -21,6 +21,11 @@ public class ProjectDto {
 	private Byte luceneSearch;
 	private String luceneSearchName;
 	private String statusName;
+	private String createTimeStr;
+	/**
+	 * 访问方式
+	 */
+	private String visitWay;
 
 	public void setId(String id){
 		this.id=id;
@@ -123,4 +128,20 @@ public class ProjectDto {
     public void setUserName(String userName) {
         this.userName = userName;
     }
+
+	public String getCreateTimeStr() {
+		return createTimeStr;
+	}
+
+	public void setCreateTimeStr(String createTimeStr) {
+		this.createTimeStr = createTimeStr;
+	}
+
+	public String getVisitWay() {
+		return visitWay;
+	}
+
+	public void setVisitWay(String visitWay) {
+		this.visitWay = visitWay;
+	}
 }

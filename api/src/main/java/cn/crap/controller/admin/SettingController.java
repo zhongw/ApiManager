@@ -8,12 +8,10 @@ import cn.crap.framework.JsonResult;
 import cn.crap.framework.MyException;
 import cn.crap.framework.base.BaseController;
 import cn.crap.framework.interceptor.AuthPassport;
-import cn.crap.model.mybatis.Setting;
-import cn.crap.model.mybatis.SettingCriteria;
-import cn.crap.service.custom.CustomSettingService;
-import cn.crap.service.mybatis.SettingService;
+import cn.crap.model.Setting;
+import cn.crap.query.SettingQuery;
+import cn.crap.service.SettingService;
 import cn.crap.utils.Page;
-import cn.crap.utils.TableField;
 import cn.crap.utils.Tools;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -28,38 +26,25 @@ public class SettingController extends BaseController {
     @Autowired
     private SettingService settingService;
     @Autowired
-    private CustomSettingService customSettingService;
+    private SettingService customSettingService;
     @Autowired
     private Config config;
-    private final static String[] indexUrls = new String[]{"index.do", "front/", "project.do", "dashboard.htm"};
+    private final static String[] indexUrls = new String[]{"index.do", "visitor/", "project.do", "dashboard.htm"};
 
     /**
-     * @param currentPage 当前页
      * @return
      */
-    @RequestMapping("/setting/list.do")
+    @RequestMapping("/admin/setting/list.do")
     @ResponseBody
     @AuthPassport(authority = C_AUTH_SETTING)
-    public JsonResult list(String key, String remark, Integer currentPage) {
-        Page page = new Page(currentPage);
+    public JsonResult list(@ModelAttribute SettingQuery query) throws MyException{
+        Page page = new Page(query);
 
-        SettingCriteria example = new SettingCriteria();
-        SettingCriteria.Criteria criteria = example.createCriteria();
-        if (key != null) {
-            criteria.andMkeyLike(key);
-        }
-        if (remark != null) {
-            criteria.andRemarkLike(remark);
-        }
-        example.setOrderByClause(TableField.SORT.SEQUENCE_DESC);
-        example.setLimitStart(page.getStart());
-        example.setMaxResults(page.getSize());
-
-        page.setAllRow(settingService.countByExample(example));
-        return new JsonResult().data(SettingAdapter.getDto(settingService.selectByExample(example))).page(page);
+        page.setAllRow(settingService.count(query));
+        return new JsonResult().data(SettingAdapter.getDto(settingService.query(query))).page(page);
     }
 
-    @RequestMapping("/setting/detail.do")
+    @RequestMapping("/admin/setting/detail.do")
     @ResponseBody
     @AuthPassport(authority = C_AUTH_SETTING)
     public JsonResult detail(String id, String key, String type) {
@@ -77,7 +62,7 @@ public class SettingController extends BaseController {
         return new JsonResult().data(SettingAdapter.getDto(setting));
     }
 
-    @RequestMapping("/setting/addOrUpdate.do")
+    @RequestMapping("/admin/setting/addOrUpdate.do")
     @ResponseBody
     @AuthPassport(authority = C_AUTH_SETTING)
     public JsonResult addOrUpdate(@ModelAttribute SettingDto settingDto) throws Exception {
@@ -116,13 +101,16 @@ public class SettingController extends BaseController {
                     value = config.getDomain() + "/" + value;
                 }
             }
-            cssContent = cssContent.replace("{{settings." + s.getKey() + "}}", value);
+            cssContent = cssContent.replace("[" + s.getKey() + "]", value);
         }
+        cssContent = cssContent.replace("[MAIN_COLOR_HOVER]",
+                Tools.getRgba(0.1f, settingCache.get(S_MAIN_COLOR).getValue()));
+
         Tools.staticize(cssContent, cssPath + "/setting.css");
         return new JsonResult().data(settingDto);
     }
 
-    @RequestMapping("/setting/delete.do")
+    @RequestMapping("/admin/setting/delete.do")
     @ResponseBody
     @AuthPassport(authority = C_AUTH_SETTING)
     public JsonResult delete(@RequestParam String id) throws MyException {
@@ -135,7 +123,7 @@ public class SettingController extends BaseController {
         return SUCCESS;
     }
 
-    @RequestMapping("/back/setting/changeSequence.do")
+    @RequestMapping("/admin/setting/changeSequence.do")
     @ResponseBody
     @AuthPassport(authority = C_AUTH_SETTING)
     public JsonResult changeSequence(@RequestParam String id, @RequestParam String changeId) {

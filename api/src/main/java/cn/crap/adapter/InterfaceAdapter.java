@@ -7,10 +7,10 @@ import cn.crap.enumer.InterfaceStatus;
 import cn.crap.enumer.LuceneSearchType;
 import cn.crap.enumer.ProjectType;
 import cn.crap.framework.SpringContextHolder;
-import cn.crap.model.mybatis.Interface;
-import cn.crap.model.mybatis.InterfaceWithBLOBs;
-import cn.crap.model.mybatis.Module;
-import cn.crap.model.mybatis.Project;
+import cn.crap.model.Interface;
+import cn.crap.model.InterfaceWithBLOBs;
+import cn.crap.model.Module;
+import cn.crap.model.Project;
 import cn.crap.service.tool.ModuleCache;
 import cn.crap.service.tool.ProjectCache;
 import cn.crap.utils.DateFormartUtil;
@@ -29,7 +29,7 @@ import java.util.List;
  * Avoid exposing sensitive data and modifying data that is not allowed to be modified
  */
 public class InterfaceAdapter {
-    public static InterfaceDto getDto(InterfaceWithBLOBs model, Module module, boolean handleText){
+    public static InterfaceDto getDto(InterfaceWithBLOBs model, Module module, Project project, boolean handleText){
         if (model == null){
             return null;
         }
@@ -79,6 +79,9 @@ public class InterfaceAdapter {
 			dto.setModuleName(handleText(module.getName(), handleText));
 			dto.setModuleUrl(handleText(module.getUrl(), handleText));
 		}
+		if (project != null){
+		    dto.setProjectName(project.getName());
+        }
 		
         return dto;
     }
@@ -149,18 +152,18 @@ public class InterfaceAdapter {
         }
         List<InterfaceDto> dtos = new ArrayList<>();
         for (InterfaceWithBLOBs model : models){
-            dtos.add(getDto(model, null, false));
+            dtos.add(getDto(model, null, null, false));
         }
         return dtos;
     }
 
-	public static List<InterfaceDto> getDto(List<InterfaceWithBLOBs> models, Module module){
+	public static List<InterfaceDto> getDto(List<InterfaceWithBLOBs> models, Module module, Project project){
 		if (models == null){
 			return new ArrayList<>();
 		}
 		List<InterfaceDto> dtos = new ArrayList<>();
 		for (InterfaceWithBLOBs model : models){
-			dtos.add(getDto(model, module, false));
+			dtos.add(getDto(model, module, project, false));
 		}
 		return dtos;
 	}
@@ -198,19 +201,19 @@ public class InterfaceAdapter {
 		dto.setModuleName(module.getName());
 		dto.setTitle(model.getInterfaceName());
 		dto.setType(Interface.class.getSimpleName());
-		dto.setUrl("#/"+model.getProjectId()+"/front/interfaceDetail/" + model.getId());
+		dto.setUrl("#/interface/detail?projectId=" + model.getProjectId() + "&id=" + model.getId());
 		dto.setVersion(model.getVersion());
 		dto.setHref(model.getFullUrl());
 		dto.setProjectId(model.getProjectId());
-		// 私有项目不能建立索引
 
-		if(project.getType() == ProjectType.PRIVATE.getType()){
-			dto.setNeedCreateIndex(false);
-		}
-
-		if(LuceneSearchType.No.getByteValue().equals(project.getLuceneSearch())){
-			dto.setNeedCreateIndex(false);
-		}
+		dto.setNeedCreateIndex(false);
+        if(LuceneSearchType.Yes.getByteValue().equals(project.getLuceneSearch())){
+            dto.setNeedCreateIndex(true);
+        }
+        // 私有项目不能建立索引
+        if(project.getType() == ProjectType.PRIVATE.getType()){
+            dto.setNeedCreateIndex(false);
+        }
 		return dto;
 
 	}

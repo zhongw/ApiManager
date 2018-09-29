@@ -1,0 +1,130 @@
+/**
+后端css样式
+ */
+body{
+    min-width: 1000px;
+}
+.table-no-border td{
+    border-top: 0px!important;
+    text-align: left;
+}
+.table-no-border td input, .table-no-border td select, .table-no-border td textarea{
+    border: 1px solid #e0e0e0;
+}
+.text {
+    border: 1px solid #ccc;
+    height: 1000px;
+}
+.navbar-brand{
+    width: 51px;
+    padding: 10px;
+}
+.navbar-brand img{
+    height: 30px;
+    width: 30px;
+}
+.nav{
+    border-bottom: 1px solid #cccccc;
+}
+.menu_a,.left-menu a{
+    text-align: left;
+    height: 50px;
+    line-height: 50px;
+    display: block;
+    padding-left:15px;
+    border-bottom: 1px solid #eaeaea;
+    color: #555555;
+    width: 100%;
+}
+.menu_a:hover,.left-menu a:hover{
+    margin-top:-1px;
+    margin-bottom:-1px;
+    height:52px;
+    line-height: 52px;
+}
+.menu_b{
+    height: 40px;
+    line-height: 40px;
+    display: block;
+    padding-left:15px;
+    padding-right:15px;
+    overflow:hidden;
+    border-bottom: 1px dashed #eaeaea;
+    width: 100%;
+    color: #555555;
+    font-size: 14px;
+}
+.project-menu{
+    text-align: left;
+    display: block;
+    float: left;
+    cursor: pointer;
+    width: 12.5%;
+    background-color: #f9fafc;
+    border-left: 1px solid #eeeeee;
+    height: 60px;
+    line-height: 60px;
+    font-size: 14px;
+    padding-left: 10px;
+    overflow: hidden;
+}
+
+.left-menu {
+    width: 250px;
+    height: 100%;
+    max-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    position: fixed;
+    background-color: #bbbbbb;
+    padding-top: 0px;
+    padding-bottom: 0px;
+
+}
+.left-menu .tooltip{
+    z-index: 1000;
+    position: fixed!important;
+}
+.hover-adorn:hover,.active-adorn{
+    color: #ffffff!important;
+    opacity: 0.5;
+    cursor: pointer;
+    text-decoration: none;
+}
+.hover-main:hover,.active-main{
+    cursor: pointer;border:0px!important;
+    text-decoration: none;
+}
+.main-nav{
+    padding: 0px;
+    font-size: 16px;
+    background-color: #ffffff;
+    height: 50px;
+    padding-top: 10px;
+    border-bottom: 1px solid #e0e0e0;
+    border-left: 1px solid #e0e0e0;
+    position: fixed;
+    z-index: 100;
+    padding-left: 10px;
+}
+/******* markdown ******/
+.editormd-menu > li > a > .fa {
+    padding: 2px!important;
+}
+.editormd-menu .fa {
+    font: normal normal normal 12px/1 FontAwesome;
+}
+.editormd-menu > li > a {
+    min-width: 20px!important;
+}
+.editormd-menu > li {
+    padding: 2px 1px!important;
+}
+.editormd-toolbar-container {
+    min-height: 30px!important;
+}
+/** 行号显示不完全 **/
+.CodeMirror-linenumber {
+    word-break: keep-all!important;
+    word-wrap: normal!important;
+}

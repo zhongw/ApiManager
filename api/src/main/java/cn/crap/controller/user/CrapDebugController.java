@@ -1,34 +1,34 @@
 package cn.crap.controller.user;
 
-import java.util.*;
-
 import cn.crap.adapter.DebugAdapter;
+import cn.crap.dto.DebugDto;
+import cn.crap.dto.DebugInterfaceParamDto;
+import cn.crap.dto.LoginInfoDto;
 import cn.crap.enumer.MyError;
-import cn.crap.model.mybatis.*;
-import cn.crap.service.custom.CustomDebugService;
-import cn.crap.service.custom.CustomModuleService;
-import cn.crap.service.mybatis.DebugService;
-import cn.crap.service.mybatis.ModuleService;
-import cn.crap.service.mybatis.ProjectService;
+import cn.crap.framework.JsonResult;
+import cn.crap.framework.MyException;
+import cn.crap.framework.base.BaseController;
+import cn.crap.framework.interceptor.AuthPassport;
+import cn.crap.model.Debug;
+import cn.crap.model.Module;
+import cn.crap.model.Project;
+import cn.crap.query.DebugQuery;
+import cn.crap.query.ModuleQuery;
+import cn.crap.service.DebugService;
+import cn.crap.service.ModuleService;
+import cn.crap.service.ProjectService;
 import cn.crap.utils.LoginUserHelper;
+import cn.crap.utils.MD5;
+import cn.crap.utils.MyString;
+import cn.crap.utils.Tools;
+import com.alibaba.fastjson.JSON;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import com.alibaba.fastjson.JSON;
-
-import cn.crap.dto.DebugDto;
-import cn.crap.dto.DebugInterfaceParamDto;
-import cn.crap.dto.LoginInfoDto;
-import cn.crap.framework.JsonResult;
-import cn.crap.framework.MyException;
-import cn.crap.framework.interceptor.AuthPassport;
-import cn.crap.framework.base.BaseController;
-import cn.crap.utils.MD5;
-import cn.crap.utils.MyString;
-import cn.crap.utils.Tools;
+import java.util.*;
 
 @Controller
 @RequestMapping("/user/crapDebug")
@@ -36,13 +36,11 @@ public class CrapDebugController extends BaseController {
     @Autowired
     private DebugService debugService;
     @Autowired
-    private CustomDebugService customDebugService;
+    private DebugService customDebugService;
     @Autowired
     private ProjectService projectService;
     @Autowired
     private ModuleService moduleService;
-    @Autowired
-    private CustomModuleService customModuleService;
 
     @RequestMapping("/synch.do")
     @ResponseBody
@@ -79,9 +77,7 @@ public class CrapDebugController extends BaseController {
                 deleteDebug(user, d, moduleId);
 
                 // 每个用户的最大接口数量不能超过100
-                DebugCriteria example = new DebugCriteria();
-                example.createCriteria().andUidEqualTo(user.getId());
-                int totalNum = debugService.countByExample(example);
+                int totalNum = debugService.count(new DebugQuery().setUserId(user.getId()));
                 if (totalNum > 100) {
                     return new JsonResult(MyError.E000058);
                 }
@@ -96,16 +92,13 @@ public class CrapDebugController extends BaseController {
 
 
         // 组装返回数据
-        List<Module> modules = customModuleService.queryByProjectId(projectId);
+        List<Module> modules = moduleService.query(new ModuleQuery().setProjectId(projectId));
         List<String> moduleIds = new ArrayList<>();
         for (Module m : modules) {
             moduleIds.add(m.getId());
         }
 
-        DebugCriteria example = new DebugCriteria();
-        example.createCriteria().andModuleIdIn(moduleIds);
-        example.setOrderByClause("sequence asc");
-        List<Debug> debugs = debugService.selectByExample(example);
+        List<Debug> debugs = debugService.query(new DebugQuery().setModuleIds(moduleIds));
         Map<String, List<DebugDto>> mapDebugs = new HashMap<>();
         for (Debug d : debugs) {
             try {
@@ -210,7 +203,7 @@ public class CrapDebugController extends BaseController {
         }
     }
 
-    private void handelModule(LoginInfoDto user, Project project, int moduleSequence, DebugInterfaceParamDto d, String moduleId) {
+    private void handelModule(LoginInfoDto user, Project project, int moduleSequence, DebugInterfaceParamDto d, String moduleId) throws Exception{
         d.setModuleId(moduleId);
         Module module = moduleService.getById(moduleId);
 

@@ -1,11 +1,11 @@
 package cn.crap.dao.mybatis;
 
-import cn.crap.model.mybatis.Debug;
-import cn.crap.model.mybatis.DebugCriteria;
+import cn.crap.model.Debug;
+import cn.crap.model.DebugCriteria;
 import java.util.List;
 import org.apache.ibatis.annotations.Param;
 
-public interface DebugDao {
+public interface DebugDao extends BaseDao<Debug>{
     int countByExample(DebugCriteria example);
 
     int deleteByExample(DebugCriteria example);

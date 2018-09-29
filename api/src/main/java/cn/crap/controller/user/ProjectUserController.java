@@ -6,15 +6,13 @@ import cn.crap.enumer.MyError;
 import cn.crap.framework.JsonResult;
 import cn.crap.framework.MyException;
 import cn.crap.framework.base.BaseController;
-import cn.crap.model.mybatis.Project;
-import cn.crap.model.mybatis.ProjectUser;
-import cn.crap.model.mybatis.User;
-import cn.crap.model.mybatis.UserCriteria;
-import cn.crap.service.custom.CustomProjectUserService;
-import cn.crap.service.custom.CustomUserService;
-import cn.crap.service.mybatis.ProjectUserService;
-import cn.crap.service.mybatis.UserService;
-import cn.crap.utils.IConst;
+import cn.crap.model.Project;
+import cn.crap.model.ProjectUser;
+import cn.crap.model.User;
+import cn.crap.query.ProjectUserQuery;
+import cn.crap.query.UserQuery;
+import cn.crap.service.ProjectUserService;
+import cn.crap.service.UserService;
 import cn.crap.utils.MyString;
 import cn.crap.utils.Page;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,22 +30,24 @@ import java.util.List;
 public class ProjectUserController extends BaseController{
 
 	@Autowired
-	private ProjectUserService projectUserService;
-	@Autowired
-	private CustomUserService customUserService;
+	private UserService customUserService;
 	@Autowired
 	private UserService userService;
 	@Autowired
-	private CustomProjectUserService customProjectUserService;
+	private ProjectUserService projectUserService;
 	
 	@RequestMapping("/list.do")
 	@ResponseBody
-	public JsonResult list(@RequestParam String projectId, @RequestParam(defaultValue="1") int currentPage) throws MyException{
-		Assert.isTrue(currentPage > 0);
-        Page<ProjectUser> page= new Page(SIZE, currentPage);
-			checkUserPermissionByProject( projectCache.get(projectId) );
-			page = customProjectUserService.queryByProjectId(projectId, page);
-			return new JsonResult(1, ProjectUserAdapter.getDto(page.getList()), page);
+	public JsonResult list(@ModelAttribute ProjectUserQuery query) throws MyException{
+		Assert.notNull(query.getProjectId());
+        Page page= new Page(query);
+
+        checkUserPermissionByProject( projectCache.get(query.getProjectId()));
+
+		List<ProjectUser> projectUsers = projectUserService.query(query);
+        page.setAllRow(projectUserService.count(query));
+
+        return new JsonResult(1, ProjectUserAdapter.getDto(projectUsers), page);
 	}	
 	
 	@RequestMapping("/detail.do")
@@ -77,9 +77,8 @@ public class ProjectUserController extends BaseController{
 		if( !MyString.isEmpty(projectUser.getUserId()) ){
 			search = userService.getById( projectUser.getUserId() );
 		}else if( !MyString.isEmpty( projectUser.getUserEmail()) ){
-			UserCriteria example = new UserCriteria();
-			example.createCriteria().andEmailEqualTo(projectUser.getUserEmail());
-			List<User> users = userService.selectByExample(example);
+            UserQuery query = new UserQuery().setEqualEmail(projectUser.getUserEmail());
+			List<User> users = userService.query(query);
 			if( users.size() == 1){
 				search = users.get(0);
 			}
