@@ -5,6 +5,29 @@ import java.util.List;
 import javax.servlet.http.HttpServletRequest;
 
 public class MyString {
+
+	public static String getStr(String value){
+		if (value == null){
+			return "";
+		}
+		if (isEmpty(value)){
+			return  "";
+		}
+		return value;
+	}
+	public static boolean getBoolean(String value, boolean defValue){
+		if (value == null){
+			return defValue;
+		}
+
+		try{
+			return Boolean.parseBoolean(value);
+		}catch (Exception e){
+			e.printStackTrace();
+			return defValue;
+		}
+	}
+
 	public static boolean isEquals(String tagValue,String value)
 	{
 		if(isEmpty(tagValue) || isEmpty(value))

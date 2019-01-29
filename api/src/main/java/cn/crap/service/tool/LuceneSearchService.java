@@ -3,7 +3,6 @@ package cn.crap.service.tool;
 import cn.crap.dto.SearchDto;
 import cn.crap.service.ILuceneService;
 import cn.crap.service.ISearchService;
-import cn.crap.beans.Config;
 import cn.crap.utils.*;
 import org.apache.log4j.Logger;
 import org.apache.lucene.analysis.Analyzer;
@@ -40,8 +39,6 @@ public class LuceneSearchService implements ISearchService {
 	private SettingCache settingCache;
 	@Autowired
 	private StringCache stringCache;
-	@Autowired
-	private Config config;
 
 	/**
 	 * 在默认情况下使用 @Autowired 注释进行自动注入时，Spring 容器中匹配的候选 Bean 数目必须有且仅有一个
@@ -220,7 +217,7 @@ public class LuceneSearchService implements ISearchService {
 			writer.updateDocument(new Term("id", searchDto.getId()), dtoToDoc(searchDto));
 		} catch (Exception e) {
 			e.printStackTrace();
-			stringCache.add(IConst.C_CACHE_ERROR_TIP, "Lucene添加异常，请联系管理员查看日志，错误信息（消息将保留10分钟，请及时处理）：" + e.getMessage());
+			stringCache.add(IConst.C_CACHE_ERROR_TIP, "Lucene异常，请联系管理员查看日志，错误信息（消息将保留10分钟，请及时处理）：" + e.getMessage());
 		} finally {
 			if (writer != null) {
 				try {
@@ -235,27 +232,7 @@ public class LuceneSearchService implements ISearchService {
 
 	@Override
 	public boolean update(SearchDto searchDto) throws IOException {
-		IndexWriter writer = null;
-		try {
-			if(!searchDto.isNeedCreateIndex()){
-				delete(searchDto);
-				return true;
-			}
-
-			IndexWriterConfig conf = new IndexWriterConfig(new StandardAnalyzer());
-			conf.setOpenMode(OpenMode.CREATE_OR_APPEND);
-			writer = new IndexWriter(
-					FSDirectory.open(Paths.get(settingCache.get(ISetting.S_LUCENE_DIR).getValue())), conf);
-			writer.updateDocument(new Term("id", searchDto.getId()), dtoToDoc(searchDto));
-		} catch (Exception e) {
-			e.printStackTrace();
-			stringCache.add(IConst.C_CACHE_ERROR_TIP, "Lucene更新异常，请联系管理员查看日志，错误信息（消息将保留10分钟，请及时处理）：" + e.getMessage());
-		} finally {
-			if (writer != null) {
-				writer.close();
-			}
-		}
-		return true;
+		return add(searchDto);
 	}
 
 	private boolean isRebuild = false;

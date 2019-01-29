@@ -1,6 +1,6 @@
-var succ1 = '<div class=\"text-success h tc\"><i class="iconfont">&#xe60b;</i>&nbsp;&nbsp;';
+var succ1 = '<div class=\"text-success h tc\"><i class="iconfont">&#xe6b1;</i>&nbsp;&nbsp;';
 var succ2 = '</div>';
-var err1 = '<div class=\"text-danger h tc\"><i class="iconfont">&#xe60c;</i>&nbsp;&nbsp;';
+var err1 = '<div class=\"text-danger h tc\"><i class="iconfont">&#xe6b7;</i>&nbsp;&nbsp;';
 var err2 = '</div>';
 var loadText = "<div class='tc h tip'><p><img src=\"resources/images/loading.gif\" />&nbsp;&nbsp;努力加载中，请稍后...</p></div>";
 function openPage(link){
@@ -8,10 +8,6 @@ function openPage(link){
 }
 function voidFunction(){}
 function goBack(){
-	var Top = $(window).height()/2 - 90;
-    var Left = $(window).width()/2 - 60;
-    $("#lookUp").css({left:Left+"px",top:Top+"px"});
-	$("#lookUp").fadeIn();
 	history.back(-1);
 }
 /*******************************************************************************
@@ -56,7 +52,7 @@ function getValue(params, key)
  *            表单id
  * @param iPost
  *            发送方式
- * @param ishowMethod
+ * @param isHowMethod
  *            返回数据显示方式:(0:doNothing).什么都不做 (1:updateInput).更新input文本域中的值 (2:updateDivWithImg).更新div中的html，带图标
  *            (3:updateDiv).更新div中的html，不带图标 (4:html).返回html页面 (5:replaceDiv).替换div 
  *            (6:deleteDiv).删除div (7:return).返回数据 (100:custom).调用自定义回调函数刷新数据
@@ -91,8 +87,9 @@ function callAjax(iUrl, iFormId, iPost, isHowMethod, iLoading, iTarget,
 	}
 	
 	// 显示提示语句，只有异步请求才显示提示框
-	if(aAsync)
-		showTip(iTarget,iLoading);
+	if(aAsync) {
+        showTip(iTarget, iLoading);
+    }
 
 	xParams = xParams + '&CPTS=' + new Date().getTime();
 			$.ajax({
@@ -113,38 +110,37 @@ function callAjax(iUrl, iFormId, iPost, isHowMethod, iLoading, iTarget,
 						data = "[ERROR]"+ eval("(" + data + ")").error.message;
 					}
 					if(data.indexOf('"success":1') >= 0){
-						data = "[OK]操作成功！";
+					    var json = eval("(" + data + ")");
+					    if (json.tipMessage != null && json.tipMessage !=''){
+                            data = "[OK]" + json.tipMessage;
+                        }else {
+                            data = "[OK]操作成功！";
+                        }
 					}
 
 					//当返回失败页面时需将data替换成提示语句
-					if (isHowMethod == '1' || isHowMethod == 'updateInput') 
-					{
+					if (isHowMethod == '1' || isHowMethod == 'updateInput') {
 						$("#"+iTarget).val(data.replace('[OK]', '').replace('[ERROR]', ''));
-					} 
-					else if (isHowMethod == '2' || isHowMethod == 'updateDivWithImg') 
-					{
-						if (data.indexOf('[OK]') >= 0)
-							$("#"+iTarget).html(succ1+ data.replace('[OK]', '')+ succ2);
-						else
-							$("#"+iTarget).html(err1+ data.replace('[ERROR]', '') + err2);
-					} 
-					else if (isHowMethod == '3' || isHowMethod == 'updateDiv') 
-					{
+					} else if (isHowMethod == '2' || isHowMethod == 'updateDivWithImg') {
+						if (data.indexOf('[OK]') >= 0) {
+                            $("#" + iTarget).html(succ1 + data.replace('[OK]', '') + succ2);
+                        }
+						else {
+                            $("#" + iTarget).html(err1 + data.replace('[ERROR]', '') + err2);
+                        }
+					}else if (isHowMethod == '3' || isHowMethod == 'updateDiv') {
 						$("#"+iTarget).html(data.replace('[OK]', '').replace('[ERROR]', ''));
-					} 
-					else if (isHowMethod == '4' || isHowMethod == 'html') 
-					{
+					} else if (isHowMethod == '4' || isHowMethod == 'html') {
 						if (data.indexOf('[ERROR]') < 0){
-							if(data.trim().length==0)
-								$("#"+iTarget).html("<div class='tc pt10'>没有数据！</div>");
-							else
-								$("#"+iTarget).html(data);
+							if(data.trim().length==0) {
+                                $("#" + iTarget).html("<div class='tc pt10'>没有数据！</div>");
+                            } else {
+                                $("#" + iTarget).html(data);
+                            }
 						}else{
 							$("#"+iTarget).html(err1+data.replace('[ERROR]', '')+ err2);
 						}
-					} 
-					else if (isHowMethod == '5' || isHowMethod == 'replaceDiv') 
-					{
+					} else if (isHowMethod == '5' || isHowMethod == 'replaceDiv') {
 						if (data.indexOf('[ERROR]') < 0)
 							$("#"+iTarget).replaceWith(data);
 						else{
@@ -153,9 +149,7 @@ function callAjax(iUrl, iFormId, iPost, isHowMethod, iLoading, iTarget,
 							showMessage('lookUp','false',false,-1);
 						}
 							
-					} 
-					else if (isHowMethod == '6' || isHowMethod == 'deleteDiv') 
-					{
+					} else if (isHowMethod == '6' || isHowMethod == 'deleteDiv') {
 						if (data.indexOf('[ERROR]') < 0)
 							$("#"+iTarget).fadeOut(300);
 						else{
@@ -164,10 +158,8 @@ function callAjax(iUrl, iFormId, iPost, isHowMethod, iLoading, iTarget,
 							showMessage('lookUp','false',false,-1);
 						}
 							
-					} 
-					else if (isHowMethod == '7' || isHowMethod == 'return')
-					{
-							idata = data;
+					} else if (isHowMethod == '7' || isHowMethod == 'return') {
+                        idata = data;
 					}
 					if (iCallBack) {
 							if (iCallBackParam) {
@@ -177,8 +169,9 @@ function callAjax(iUrl, iFormId, iPost, isHowMethod, iLoading, iTarget,
 							}
 					}
 					//100需自行处理提示信息
-					if (isHowMethod != '100' && isHowMethod != 'custom')
-						closeTip(data,iLoading,tipTime);
+					if (isHowMethod != '100' && isHowMethod != 'custom') {
+                        closeTip(data, iLoading, tipTime);
+                    }
 				}
 			});
 			return idata;
@@ -210,7 +203,7 @@ function showTip(iTarget,iLoading) {
 		}
 		floatTimes = floatTimes + 1;
 	}
-	if (oldLoadText.toUpperCase().indexOf('PROPUP') >= 0 && !floatOrPropUp && document.getElementById(iTarget)&&document.getElementById(iTarget).tagName != "INPUT") {
+	if (!floatOrPropUp && document.getElementById(iTarget)&&document.getElementById(iTarget).tagName != "INPUT") {
 		if (iLoading.toUpperCase() != "FALSE"){
 			//传递的参数含有图片，表示不以div的形式显示提示内容
 			if(iLoading.indexOf("<img")>=0){
@@ -224,16 +217,20 @@ function showTip(iTarget,iLoading) {
 	}
 }
 function closeTip(data,iLoading,tipTime){
-	tipTime = tipTime?tipTime:2;
+	tipTime = tipTime?tipTime:5;
+    if (data.indexOf('[OK]')>=0 || data.indexOf('[ERROR]') < 0){
+        tipTime = 2;
+    }
+
 	var tipMessage = tipTime+ "秒后自动关闭";
 	if(tipTime==-1){//不关闭
 		tipMessage = '';
 	}
 	if(data.indexOf('[OK]')>=0){
 		if( data.replace('[OK]','')!='' )
-			tipMessage = data.replace('[OK]','') + tipMessage;
+			tipMessage = data.replace('[OK]','') + '，' + tipMessage;
 		else
-			tipMessage = "操作成功！<br>" + tipMessage;
+			tipMessage = "操作成功" + '，' + tipMessage;
 	}
 	if(data.indexOf('[ERROR]')>=0){
 		tipMessage = data.replace('[ERROR]', '') + "<br>" + tipMessage;
@@ -249,10 +246,6 @@ function closeTip(data,iLoading,tipTime){
 			$("#lookUpContent").html(succ1+tipMessage+succ2);
 		}
 		else{
-			if(tipTime !=-1){
-				tipTime = 5;
-				tipMessage = tipTime+ "秒后自动关闭";
-			}
 			$("#lookUpContent").html(err1+tipMessage +err2);
 		}
 		showMessage('lookUp','false',false,tipTime);

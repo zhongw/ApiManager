@@ -2,29 +2,24 @@ package cn.crap.service.tool;
 
 import cn.crap.dto.LoginInfoDto;
 import cn.crap.dto.PickDto;
-import cn.crap.enumer.IconfontCode;
-import cn.crap.enumer.MyError;
-import cn.crap.enumer.PickCode;
+import cn.crap.enu.IconfontCode;
+import cn.crap.enu.MyError;
+import cn.crap.enu.PickCode;
+import cn.crap.enu.SettingEnum;
 import cn.crap.framework.MyException;
-import cn.crap.model.mybatis.Error;
-import cn.crap.model.mybatis.*;
-import cn.crap.service.IPickService;
-import cn.crap.service.custom.CustomErrorService;
-import cn.crap.service.custom.CustomModuleService;
-import cn.crap.service.custom.CustomProjectService;
-import cn.crap.service.mybatis.UserService;
-import cn.crap.utils.IConst;
-import cn.crap.utils.LoginUserHelper;
-import cn.crap.utils.MyString;
+import cn.crap.model.Error;
+import cn.crap.model.*;
+import cn.crap.query.ErrorQuery;
+import cn.crap.query.ModuleQuery;
+import cn.crap.service.*;
+import cn.crap.utils.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 /**
  * 采用责任链模式
@@ -34,13 +29,15 @@ import java.util.TreeSet;
 @Service("userPickService")
 public class UserPickService implements IPickService{
     @Autowired
-    private CustomErrorService customErrorService;
+    private ErrorService errorService;
     @Autowired
-    private CustomProjectService customProjectService;
+    private ProjectService projectService;
     @Autowired
     private UserService userService;
     @Autowired
-    private CustomModuleService customModuleService;
+    private SettingCache settingCache;
+    @Autowired
+    private ModuleService moduleService;
     @Resource(name = "adminPickService")
     private IPickService adminPickService;
 
@@ -61,12 +58,14 @@ public class UserPickService implements IPickService{
                     throw new MyException(MyError.E000065, "key（项目ID）不能为空");
                 }
 
-                for (Error error : customErrorService.queryByProjectId(key, null, null, null)) {
+                for (Error error : errorService.query(new ErrorQuery().setProjectId(key).setPageSize(settingCache.getInteger(SettingEnum.MAX_ERROR)))) {
                     pick = new PickDto(error.getErrorCode(), error.getErrorCode() + "--" + error.getErrorMsg());
                     picks.add(pick);
                 }
                 return picks;
             case MENU_ICON:
+                pick = new PickDto("icon_null", IConst.NULL, "不使用图标");
+                picks.add(pick);
                 for (IconfontCode iconfontCode : IconfontCode.values()) {
                     pick = new PickDto(iconfontCode.name(), "<i class=\"iconfont\">" + iconfontCode.getValue() + "</i>", iconfontCode.getName());
                     picks.add(pick);
@@ -75,7 +74,7 @@ public class UserPickService implements IPickService{
 
             case CATEGORY:
                 int i = 0;
-                List<String> categories = customModuleService.queryCategoryByModuleId(key);
+                List<String> categories = moduleService.queryCategoryByModuleId(key);
                 for (String category : categories) {
                     i++;
                     pick = new PickDto("category_" + i, category, category);
@@ -88,11 +87,16 @@ public class UserPickService implements IPickService{
              * 拷贝接口时使用
              */
             case MY_MODULE:
-                for (Project p : customProjectService.queryMyProjectByUserId(user.getId())) {
-                    pick = new PickDto(IConst.SEPARATOR, p.getName());
+                for (Project p : projectService.query(user.getId(), false, null, new Page(100, 1))) {
+                    pick = new PickDto(IConst.C_SEPARATOR, p.getName());
                     picks.add(pick);
-
-                    for (Module m : customModuleService.queryByProjectId(p.getId())) {
+                    List<Module> moduleList = moduleService.query(new ModuleQuery().setProjectId(p.getId()).setPageSize(100));
+                    if (CollectionUtils.isEmpty(moduleList)){
+                        pick = new PickDto(System.currentTimeMillis() + Tools.getChar(20), null,"项目下尚未创建模块");
+                        picks.add(pick);
+                        continue;
+                    }
+                    for (Module m : moduleList) {
                         pick = new PickDto(m.getId(), m.getName());
                         picks.add(pick);
                     }
@@ -103,7 +107,7 @@ public class UserPickService implements IPickService{
                 if (MyString.isEmpty(key)) {
                     throw new MyException(MyError.E000065, "key（项目ID）不能为空");
                 }
-                for (Module m : customModuleService.queryByProjectId(key)) {
+                for (Module m : moduleService.query(new ModuleQuery().setProjectId(key).setPageSize(100))) {
                     pick = new PickDto(m.getId(), m.getName());
                     picks.add(pick);
                 }
@@ -111,8 +115,8 @@ public class UserPickService implements IPickService{
 
 
             case USER:
-                if (MyString.isEmpty(key) || key.trim().length() < 4) {
-                    throw new MyException(MyError.E000065, "输入的搜索长度必须大于3");
+                if (MyString.isEmpty(key) || key.trim().length() < 6) {
+                    throw new MyException(MyError.E000065, "输入的搜索长度必须大于5");
                 }
                 key = "%" + key + "%";
                 Set<String> userIds = new TreeSet<>();

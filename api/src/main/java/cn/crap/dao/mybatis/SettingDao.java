@@ -1,11 +1,12 @@
 package cn.crap.dao.mybatis;
 
-import cn.crap.model.mybatis.Setting;
-import cn.crap.model.mybatis.SettingCriteria;
-import java.util.List;
+import cn.crap.model.Setting;
+import cn.crap.model.SettingCriteria;
 import org.apache.ibatis.annotations.Param;
 
-public interface SettingDao {
+import java.util.List;
+
+public interface SettingDao extends BaseDao<Setting>{
     int countByExample(SettingCriteria example);
 
     int deleteByExample(SettingCriteria example);

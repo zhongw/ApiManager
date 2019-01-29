@@ -1,6 +1,74 @@
-var app = angular.module('app', [ 'ui.router', 'mainModule','webModule','interfaceMethods','textAngular']);
+var app = angular.module('app', [ 'ui.router', 'adminModule', 'userModule','visitorModule', 'userInterModule']);
+var userInterModule = angular.module("userInterModule", []);
+var visitorModule = angular.module("visitorModule", []);
+
 var NEED_PASSWORD_CODE = "E000007";
-var INVALID_PASSWORD_CODE = "E000011";
+var NEED_LOGIN = "E000021";
+
+app.filter("removeLast",function(){
+    return function (value, needRemoveChar) {
+        if(!value) {
+            return "";
+        }else if (needRemoveChar){
+            if (value.endsWith(needRemoveChar)){
+                return value.substring(0,value.length-1);
+			}else {
+                return value;
+			}
+        }else {
+            return value.substring(0,value.length-1);
+		}
+    }
+});
+//以html形式输出
+app.filter("trustHtml",function($sce){
+    return function (input){ return $sce.trustAsHtml(input); } ;
+});
+
+// 背景色
+app.filter("getClass",function(){
+    return function (value) {
+        if(value=='primary') {
+            return "bg-danger";
+        }
+        else if(value=='foreign') {
+            return "bg-success";
+        }
+        else if(value=='associate') {
+            return "bg-info";
+        }
+        else {
+            return "";
+        }
+    }
+});
+
+// flag等转中文
+app.filter("toChinese",function(){
+    return function (value) {
+        if(value=='primary')
+            return "主键";
+        else if(value=='foreign')
+            return "外键";
+        else if(value=='associate')
+            return "关联";
+        else
+            return "普通";
+    }
+});
+
+app.filter("getUrl",function($stateParams){
+	return function (value) {
+	    if (!value){
+	        return "";
+        }
+        var url = URL_LIST[value];
+	    if (!url){
+	        return "";
+        }
+	    return url;
+	}
+});
 
 /**
  * 由于整个应用都会和路由打交道，所以这里把$state和$stateParams这两个对象放到$rootScope上，方便其它地方引用和注入。
@@ -10,11 +78,25 @@ var INVALID_PASSWORD_CODE = "E000011";
  * @param  {[type]} $stateParams
  * @return {[type]}
  */
-app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) {
+app.run(function($rootScope, $state, $stateParams, $location, $http, $timeout,httpService) {
 	$rootScope.$state = $state;
 	$rootScope.$stateParams = $stateParams;
 	$rootScope.pick = [];
-	
+    $rootScope.stopPropagation = function (e) {
+        e.stopPropagation();
+       return false;
+    }
+    $rootScope.goBack = function goBack(){
+        history.back(-1);
+    }
+    
+    $rootScope.reload = function reload(){
+        location.reload();
+    }
+
+    $rootScope.go = function (href) {
+        $location.url(href);
+    }
 	$rootScope.loadPickByName = function loadPick(params,event,iCallBack,iCallBackParam) { 
 		var iwidth = getValue(params,'iwidth');
 		var iheight = getValue(params,'iheight');
@@ -52,8 +134,10 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
 		showMessage('lookUp','false',false,-1);
 	}
 	$rootScope.getBaseData = function($scope,$http,params,page) {
-		if(page) $scope.currentPage = page;
-		if($scope.currentPage) params += "&currentPage="+$scope.currentPage;
+		if(page) {
+            params += "&currentPage=" + page;
+        }
+
 		httpService.callHttpMethod($http,params).success(function(result) {
 			var isSuccess = httpSuccess(result,'iLoading=FLOAT','0');
 			if(!isJson(result)||isSuccess.indexOf('[ERROR]') >= 0){
@@ -61,7 +145,7 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
 				 $rootScope.list = null;
 			 }else{
 				 $rootScope.error = null;
-				 $rootScope.list = result.data;
+                 $rootScope.list = result.data;
 				 $rootScope.page = result.page;
 				 $rootScope.others=result.others;
 				 $rootScope.deleteIds = ",";
@@ -70,9 +154,38 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
 			lookUp('lookUp','',100,300,3);
 			closeTip('[ERROR]未知异常，请联系开发人员查看日志', 'iLoading=PROPUP_FLOAT', 3);
 			$rootScope.error = result;
-			 
+
 		});;
     };
+    $rootScope.getBaseDataToDataKey = function($scope,$http,params,page,dataKey,callBack) {
+        if(!page) {
+            page = 1;
+        }
+        params += "&currentPage=" + page;
+        httpService.callHttpMethod($http,params).success(function(result) {
+            var isSuccess = httpSuccess(result,'iLoading=FLOAT','0');
+            if(!isJson(result)||isSuccess.indexOf('[ERROR]') >= 0){
+                $rootScope.error = isSuccess.replace('[ERROR]', '');
+            }else{
+                $rootScope.error = null;
+                $rootScope[dataKey] = result.data;
+                if (!$rootScope.page){
+                    $rootScope.page = {};
+                }
+                $rootScope.page[dataKey] = result.page;
+
+                if (callBack){
+                    callBack();
+                }
+            }
+        }).error(function(result) {
+            lookUp('lookUp','',100,300,3);
+            closeTip('[ERROR]未知异常，请联系开发人员查看日志', 'iLoading=PROPUP_FLOAT', 3);
+            $rootScope.error = result;
+
+        });
+    };
+
 	$rootScope.detail = function(title,iwidth,iurl,iParams,callBack) {
 			//打开编辑对话框
 			openMyDialog(title,iwidth);
@@ -98,16 +211,6 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
 				 
 			});;
 	};
-	//点击详情回调，清除编辑缓存页面的table
-	$rootScope.initEditInterFace = function (){
-		changeDisplay('interFaceDetail','copyInterFace');
-		$("#eparam").addClass('none');
-		$("#param").removeClass('none');
-		$("#eheader").addClass('none');
-		$("#header").removeClass('none');
-		$("#responseEparam").addClass('none');
-		$("#responseParam").removeClass('none');
-	}
 	//点击拷贝接口详情回调
 	$rootScope.copyInterface = function() {
 		changeDisplay('copyInterFace','interFaceDetail');
@@ -140,20 +243,39 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
 	    }
 	};
 	// 选中某个选项
-	$rootScope.checkboxSelect = function(checkValues,value){
-		if( $rootScope[checkValues].indexOf(","+value+",")>=0 ){
+	$rootScope.checkboxSelect = function(checkValues,value1, value2){
+        var value = value1;
+        if (value2){
+            value = value + "_CA_SEPARATOR_" + value2;
+        }
+		if (!$rootScope[checkValues] ){
+            $rootScope[checkValues] = value+",";
+		}else if($rootScope[checkValues].indexOf(","+value+",")>=0 ){
 			$rootScope[checkValues] = $rootScope[checkValues].replace(value+",","");
 		}else{
 			$rootScope[checkValues] = $rootScope[checkValues]+value+","
 		}
 	}
-	// 全选，不选
-	$rootScope.selectAll = function(id,name,list){
+    /**
+	 * 全选、不选
+     * @param id 全选按钮
+     * @param name 列表项
+     * @param list 数据集
+     * @param field 选着的数据集字段
+     */
+	$rootScope.selectAll = function(id,name,list,field1, field2){
+		if (!field1){
+            field1 = "id";
+		}
 		selectAll(id, name);
 		if($("#"+id).prop("checked")==true){ 
 			$rootScope[name] = ",";
 			for (var i=0;i<list.length;i++){
-				$rootScope[name] = $rootScope[name] + list[i].id + "," ;
+				var value = list[i][field1];
+				if (field2){
+                    value = value + "_CA_SEPARATOR_" + list[i][field2];
+				}
+				$rootScope[name] = $rootScope[name] + value + "," ;
 			}
 		}else{
 			$rootScope[name] = ",";
@@ -181,12 +303,13 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
 				 $rootScope.model = result.data;
 				 //关闭编辑对话框
 				 closeMyDialog('myDialog');
-				 $timeout(function() {
-					 $("#refresh").click();
-                 })
                 if(afterCallBack){
                     afterCallBack();
-                }
+                } else {
+                    $timeout(function() {
+                        $("#refresh").click();
+                    })
+				}
 			 }
 		}).error(function(result) {
 			closeTip('[ERROR]未知异常，请联系开发人员查看日志', 'iLoading='+iLoading, 3);
@@ -247,8 +370,9 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
 			$("#"+id).removeClass("ndis");
 			return true;
 		}else{
-			if(!$("#"+id).hasClass("ndis"))
-				$("#"+id).addClass("ndis");
+			if(!$("#"+id).hasClass("ndis")) {
+                $("#" + id).addClass("ndis");
+            }
 			return false;
 		}
 	}
@@ -258,8 +382,9 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
 			return true;
 		}
 		var needAuth = dataType;
-		if(moduleId)
-			needAuth = needAuth+"_"+moduleId;
+		if(moduleId) {
+            needAuth = needAuth + "_" + moduleId;
+        }
 		var sessionAuth = $("#sessionAuth").val();
 		if((","+sessionAuth+",").indexOf(","+needAuth+",")>=0){
 			return true;
@@ -279,10 +404,10 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
         changeimg('imgCode2','verificationCode');
     }
 	/**
-	 * 提交数据字典时回调将表格数据转换为json
+	 * 提交数据库表时回调将表格数据转换为json
 	 */
 	$rootScope.preAddDictionary = function(){
-		var content = getParamFromTable("content");
+		var content = getParamFromTable("content", 'name');
 		$rootScope.model.content = content;
 	}
 	/**
@@ -291,28 +416,7 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
 	$rootScope.logDetailFormat = function(){
 		$rootScope.model.content  = format($rootScope.model.content);
 	}
-	/**
-	 * 数据字典、文章编辑回调
-	 */
-	$rootScope.getFields = function() {
-    		// 切换为默认编辑器
-    		changeDisplay('defEditor','kindEditor');
-	    	var content = "";
-	    	if($rootScope.model.content!=''){
-	    		// 如果是文章，eval会报错
-	    		try{
-	    			content = eval("("+$rootScope.model.content+")");
-	    		}catch(e){}
-	    	}
-	    	$("#content").find("tbody").find("tr").remove();
-	    	if(content!=null&&content!=""){
-		    	var i=0;
-		    	$.each(content, function (n, value) {
-		    		i++;
-		    		addOneField(value.name, value.type, value.notNull,value.flag, value.def, value.remark, value.rowNum);
-		        });  
-	    	}
-	};
+
 	$rootScope.jsonformat = function(id,tiperror){
 		var result = format($rootScope.model[id],tiperror);
 		if(result){
@@ -322,11 +426,7 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
 	$rootScope.callAjaxByName = function(iurl){
 		callAjaxByName(iurl);
 	}
-	/**************markdown*************/
-	$rootScope.markdownEtitor = function(href){
-		$("#markdownDialog").css('display','block'); 
-		document.getElementById("markdownFrame").src=href;
-	}
+
 	 $rootScope.iClose = function(id) {
 	    	iClose(id);
 	 };
@@ -350,5 +450,37 @@ app.run(function($rootScope, $state, $stateParams, $http, $timeout,httpService) 
 				$rootScope.error = result;
 			});
 	 }
+
+	 // 添加接口
+    $rootScope.addInterfaceCallBack= function () {
+        var headJson = getParamFromTable('editHeaderTable', 'name');
+        try{
+            eval("("+headJson+")");
+        }catch(e){
+            alert("请求头输入有误，json解析出错："+e);
+            return;
+        }
+        $rootScope.model.header = headJson;
+
+        var responseJson = getParamFromTable('editResponseParamTable', 'name');
+        try{
+            eval("("+responseJson+")");
+        }catch(e){
+            alert("返回参数输入有误，json解析出错："+e);
+            return;
+        }
+        $rootScope.model.responseParam = responseJson;
+
+        if($rootScope.model.paramType == 'FORM') {
+            var paramJson = getParamFromTable('editParamTable', 'name');
+            try {
+                eval("(" + paramJson + ")");
+            } catch (e) {
+                alert("请求参数输入有误，json解析出错：" + e);
+                return;
+            }
+            $rootScope.model.param = paramJson;
+        }
+    }
 });
 

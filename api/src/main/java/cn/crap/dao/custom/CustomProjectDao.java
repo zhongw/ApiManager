@@ -1,6 +1,6 @@
 package cn.crap.dao.custom;
 
-import cn.crap.model.mybatis.Project;
+import cn.crap.model.Project;
 import cn.crap.utils.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -35,16 +35,20 @@ public class CustomProjectDao {
 	}
 
 
-	public List<Project> queryProjectByUserId(String userId, String name, final Page page){
+	public List<Project> queryProjectByUserId(String userId, boolean onlyJoin, String name, final Page page){
 		Assert.notNull(userId);
 		Assert.notNull(page);
 
-		List <Object> params = new ArrayList<Object>();
-		params.add(userId);
-		params.add(userId);
+		List <Object> params = new ArrayList<>();
+        params.add(userId);
+        params.add(userId);
+		StringBuilder sb = new StringBuilder("select id, name, type, remark, userId, createTime, cover, sequence, status from project where");
+		if (onlyJoin){
+			sb.append(" userId !=? and id in (select projectId from project_user where userId=?)");
+		}else {
+			sb.append(" (userId= ? or id in (select projectId from project_user where userId=?))");
+		}
 
-		StringBuilder sb = new StringBuilder("select id, name, type, remark, userId, createTime, cover, sequence from project where" +
-                " (userId= ? or id in (select projectId from project_user where userId=?))");
 		if (name != null){
 			sb.append(" and name like ? ");
 			params.add("%" + name + "%");
@@ -62,21 +66,28 @@ public class CustomProjectDao {
 				project.setType(rs.getByte(3));
 				project.setRemark(rs.getString(4));
 				project.setUserId(rs.getString(5));
-				project.setCreateTime(rs.getTime(6));
+				project.setCreateTime(rs.getTimestamp(6));
 				project.setCover(rs.getString(7));
 				project.setSequence(rs.getInt(8));
+				project.setStatus(rs.getByte(9));
 				return project;
 			}
 		});
 	}
 
-	public int countProjectByUserId(String userId, String name){
+	public int countProjectByUserId(String userId, boolean onlyJoin, String name){
 		Assert.notNull(userId);
 
 		List <Object> params = new ArrayList<>();
-		params.add(userId);
-		params.add(userId);
-		StringBuilder sb = new StringBuilder("select count(0) from project where (userId=? or id in (select projectId from project_user where userId=?))");
+        params.add(userId);
+        params.add(userId);
+        StringBuilder sb = new StringBuilder("select count(0) from project where ");
+        if (onlyJoin){
+            sb.append(" userId != ? and id in (select projectId from project_user where userId=?)");
+        }else {
+            sb.append(" (userId= ? or id in (select projectId from project_user where userId=?))");
+        }
+
         if (name != null){
             sb.append(" and name like ?");
             params.add("%" + name + "%");

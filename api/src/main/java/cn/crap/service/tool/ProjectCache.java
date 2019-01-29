@@ -1,9 +1,8 @@
 package cn.crap.service.tool;
 
-import cn.crap.model.mybatis.Project;
-import cn.crap.service.ICacheService;
-import cn.crap.service.mybatis.ProjectService;
+import cn.crap.model.Project;
 import cn.crap.beans.Config;
+import cn.crap.service.ProjectService;
 import cn.crap.utils.MyString;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -14,12 +13,10 @@ import org.springframework.stereotype.Service;
 import java.util.concurrent.TimeUnit;
 
 @Service("projectCache")
-public class ProjectCache implements ICacheService<Project> {
+public class ProjectCache{
 	private static Cache<String, Project> cache;
 	public static final String CACHE_PREFIX = "project:";
 
-	@Autowired
-	private Config config;
 	@Autowired
 	private ProjectService projectService;
 
@@ -28,13 +25,13 @@ public class ProjectCache implements ICacheService<Project> {
             cache = CacheBuilder.newBuilder()
                     .initialCapacity(10)
                     .concurrencyLevel(5)
-                    .expireAfterWrite(config.getCacheTime(), TimeUnit.SECONDS)
+                    .expireAfterWrite(Config.cacheTime, TimeUnit.SECONDS)
                     .build();
         }
         return cache;
     }
 	
-	@Override
+	
 	public Project get(String projectId){
 		if(MyString.isEmpty(projectId)){
 			return new Project();
@@ -54,14 +51,14 @@ public class ProjectCache implements ICacheService<Project> {
 		return p;
 	}
 
-    @Override
+    
     public boolean del(String projectId){
 		getCache().invalidate(assembleKey(projectId));
         return true;
     }
 
 
-	@Override
+	
     public boolean flushDB(){
 		getCache().invalidateAll();
 	    return true;

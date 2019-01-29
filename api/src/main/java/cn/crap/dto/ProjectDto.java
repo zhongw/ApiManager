@@ -1,7 +1,5 @@
 package cn.crap.dto;
 
-import java.util.Date;
-
 /**
  * Automatic generation by tools
  * dto: exchange data with view
@@ -21,6 +19,15 @@ public class ProjectDto {
 	private Byte luceneSearch;
 	private String luceneSearchName;
 	private String statusName;
+	private String createTimeStr;
+	/**
+	 * 访问方式
+	 */
+	private String visitWay;
+    /**
+     * 邀请链接
+     */
+    private String inviteUrl;
 
 	public void setId(String id){
 		this.id=id;
@@ -122,5 +129,29 @@ public class ProjectDto {
 
     public void setUserName(String userName) {
         this.userName = userName;
+    }
+
+	public String getCreateTimeStr() {
+		return createTimeStr;
+	}
+
+	public void setCreateTimeStr(String createTimeStr) {
+		this.createTimeStr = createTimeStr;
+	}
+
+	public String getVisitWay() {
+		return visitWay;
+	}
+
+	public void setVisitWay(String visitWay) {
+		this.visitWay = visitWay;
+	}
+
+    public String getInviteUrl() {
+        return inviteUrl;
+    }
+
+    public void setInviteUrl(String inviteUrl) {
+        this.inviteUrl = inviteUrl;
     }
 }

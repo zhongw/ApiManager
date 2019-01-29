@@ -1,36 +1,34 @@
 package cn.crap.framework.base;
 
+import cn.crap.dto.LoginInfoDto;
+import cn.crap.enu.InterfaceContentType;
+import cn.crap.enu.MyError;
+import cn.crap.enu.ProjectType;
+import cn.crap.framework.JsonResult;
+import cn.crap.framework.MyException;
+import cn.crap.framework.ThreadContext;
+import cn.crap.model.Module;
+import cn.crap.model.Project;
+import cn.crap.model.ProjectUser;
+import cn.crap.query.BaseQuery;
+import cn.crap.service.tool.*;
+import cn.crap.utils.*;
+import org.apache.log4j.Logger;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.util.Assert;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.PrintWriter;
-
-import javax.annotation.Resource;
-import javax.servlet.http.HttpServletRequest;
-
-import cn.crap.adapter.ProjectUserAdapter;
-import cn.crap.beans.Config;
-import cn.crap.dto.ProjectUserDto;
-import cn.crap.enumer.InterfaceContentType;
-import cn.crap.enumer.MyError;
-import cn.crap.framework.ThreadContext;
-import cn.crap.model.mybatis.ProjectUser;
-import cn.crap.service.tool.*;
-import cn.crap.utils.*;
-import org.apache.log4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseBody;
-
-import cn.crap.dto.LoginInfoDto;
-import cn.crap.enumer.ProjectType;
-import cn.crap.framework.JsonResult;
-import cn.crap.framework.MyException;
-import cn.crap.model.mybatis.Project;
+import java.util.Enumeration;
 
 public abstract class BaseController implements IAuthCode, IConst, ISetting {
-    protected final static String ERROR_VIEW = "/WEB-INF/views/interFacePdf.jsp";
+    protected final static String ERROR_VIEW = "/WEB-INF/views/result.jsp";
     protected final static int SIZE = 15;
     protected Logger log = Logger.getLogger(getClass());
     protected final static JsonResult SUCCESS = new JsonResult();
@@ -46,9 +44,58 @@ public abstract class BaseController implements IAuthCode, IConst, ISetting {
     protected UserCache userCache;
     @Resource(name = "objectCache")
     protected ObjectCache objectCache;
-    @Autowired
-    protected Config config;
 
+    protected Project getProject(BaseQuery query){
+        Assert.isTrue(query.getProjectId() != null || query.getModuleId() != null, "projectId & moduleId 不能同时为空");
+
+        if (query.getModuleId() != null){
+            Module module = moduleCache.get(query.getModuleId());
+            return projectCache.get(module.getProjectId());
+        }
+
+        if (query.getProjectId()!= null){
+            return projectCache.get(query.getProjectId());
+        }
+        return null;
+    }
+
+    protected String getProjectId(String projectId, String moduleId){
+        Assert.isTrue(projectId != null || moduleId != null, "projectId & moduleId 不能同时为空");
+        if (moduleId != null){
+            String moduleProjectId = moduleCache.get(moduleId).getProjectId();
+            return moduleProjectId == null ? projectId : moduleProjectId;
+        }
+        return projectId;
+    }
+
+    protected Project getProject(String projectId, String moduleId){
+        Assert.isTrue(projectId != null || moduleId != null, "projectId & moduleId 不能同时为空");
+        if (moduleId != null){
+            projectId = moduleCache.get(moduleId).getProjectId();
+        }
+        return projectCache.get(projectId);
+    }
+
+    protected Module getModule(BaseQuery query){
+        if (query.getModuleId() != null){
+            Module module = moduleCache.get(query.getModuleId());
+            return module.getId() == null ? null : module;
+        }
+        return null;
+    }
+
+    /**
+     * 检查是否是crapDebug的项目，crapDebug插件的项目不允许修改、删除
+     * @param userId
+     * @param projectId
+     * @throws MyException
+     */
+    protected void checkCrapDebug(String userId, String projectId) throws MyException{
+        String debugProjectId = MD5.encrytMD5(userId, "").substring(0, 20) + "-debug";
+        if (debugProjectId.equals(projectId)){
+            throw new MyException(MyError.E000067);
+        }
+    }
     /**
      * @param param 待校验参数
      * @param tip 前端提示文案
@@ -68,24 +115,28 @@ public abstract class BaseController implements IAuthCode, IConst, ISetting {
         throwExceptionWhenIsNull(param, tip, null);
     }
 
+
     @ExceptionHandler({Exception.class})
     @ResponseBody
     public JsonResult expHandler(HttpServletRequest request, Exception ex) {
         if (ex instanceof MyException) {
             return new JsonResult((MyException) ex);
-        } else if (ex instanceof NullPointerException) {
-            log.error(ex.getMessage(), ex);
+        }
+
+        if (ex instanceof NullPointerException) {
+            log.error("异常, params:" + getAllStrParam(request), ex);
             return new JsonResult(new MyException(MyError.E000051));
         } else {
-            log.error(ex.getMessage(), ex);
+            log.error("异常, params:" + getAllStrParam(request), ex);
             ByteArrayOutputStream outPutStream = new ByteArrayOutputStream();
             ex.printStackTrace(new PrintStream(outPutStream));
-            String exceptionDetail[] = outPutStream.toString().split("Caused by:");
+            String errorStackTrace = outPutStream.toString();
             try {
                 outPutStream.close();
             } catch (IOException e) {
             }
 
+            String exceptionDetail[] = errorStackTrace.split("Caused by:");
             String errorReason = "";
             if (exceptionDetail.length > 0) {
                 errorReason = exceptionDetail[exceptionDetail.length - 1].split("\n")[0];
@@ -97,7 +148,9 @@ public abstract class BaseController implements IAuthCode, IConst, ISetting {
              */
             if (ex instanceof DataIntegrityViolationException) {
                 if (errorReason.contains("com.mysql.jdbc.MysqlDataTruncation")) {
-                    return new JsonResult(new MyException(MyError.E000052, "（字段：" + errorReason.split("'")[1] + "）"));
+                    int index = errorStackTrace.indexOf("insert into") + 11;
+                    String table = errorStackTrace.substring(index, index + 100).split(" ")[1].trim();
+                    return new JsonResult(new MyException(MyError.E000052, "（字段：" + table + "." + errorReason.split("'")[1] + "）"));
                 }
             }
             return new JsonResult(new MyException(MyError.E000001, ex.getMessage() + "，详细错误：" + errorReason));
@@ -133,61 +186,24 @@ public abstract class BaseController implements IAuthCode, IConst, ISetting {
     }
 
     /**
-     * 用户页面权限检查
-     *
+     * 权限校验
      * @param project
      * @throws MyException
      */
-    protected void checkUserPermissionByProject(Project project, int type) throws MyException {
-        LoginInfoDto user = LoginUserHelper.getUser(MyError.E000003);
-        /**
-         * 最高管理员修改项目
-         * the supper admin can do anything
-         */
-        if (user != null && ("," + user.getRoleId()).indexOf("," + C_SUPER + ",") >= 0) {
-            return;
-        }
-
-        /**
-         * 修改自己的项目
-         * myself project
-         */
-        if (user.getId().equals(project.getUserId())) {
-            return;
-        }
-
-        if (type < 0) {
-            throw new MyException(MyError.E000003);
-        }
-
-        // 项目成员
-        ProjectUserDto puDto = ProjectUserAdapter.getDto(user.getProjects().get(project.getId()), null);
-        if (puDto == null) {
-            throw new MyException(MyError.E000003);
-        }
-
-        /**
-         * if login user is one member, then he can see the data
-         */
-        if (type == VIEW) {
-            return;
-        }
-
-        if (type < puDto.getProjectAuth().length - 1 && puDto.getProjectAuth()[type]) {
-            return;
-        }
+    protected void checkPermission(Project project) throws MyException {
+        PermissionUtil.checkPermission(project, MY_DATE);
     }
 
-    protected void checkUserPermissionByProject(Project project) throws MyException {
-        checkUserPermissionByProject(project, MY_DATE);
+    protected void checkPermission(Project project, int type) throws MyException {
+        PermissionUtil.checkPermission(project, type);
     }
 
-    protected void checkUserPermissionByProject(String projectId, int type) throws MyException {
-        checkUserPermissionByProject(projectCache.get(projectId), type);
+    protected void checkPermission(String projectId, int type) throws MyException {
+        PermissionUtil.checkPermission(projectCache.get(projectId), type);
     }
 
-    protected void checkUserPermissionByModuleId(String moduleId, int type) throws MyException {
-        checkUserPermissionByProject(projectCache.get(moduleCache.get(moduleId).getProjectId()), type);
+    protected void checkPermission(String projectId) throws MyException {
+        PermissionUtil.checkPermission(projectCache.get(projectId), MY_DATE);
     }
 
     /**
@@ -235,7 +251,12 @@ public abstract class BaseController implements IAuthCode, IConst, ISetting {
          * 如果开启了验证码，则需要校验图形验证码是否正确，防止暴力破解
          */
         if (settingCache.get(S_VISITCODE).getValue().equals("true")) {
-            String imgCode = Tools.getImgCode();
+            String imgCode = "";
+            try{
+                imgCode = Tools.getImgCode();
+            }catch (MyException e){
+                throw new MyException(MyError.E000007);
+            }
             if (MyString.notEquals(imgCode, visitCode)) {
                 throw new MyException(MyError.E000007);
             }
@@ -289,4 +310,25 @@ public abstract class BaseController implements IAuthCode, IConst, ISetting {
         return value == null ? def : value;
     }
 
+    private String getAllStrParam(HttpServletRequest request){
+        try {
+            StringBuilder sb = new StringBuilder("[");
+            Enumeration paramNames = request.getParameterNames();
+            while (paramNames.hasMoreElements()) {
+                String paramName = (String) paramNames.nextElement();
+                sb.append(paramName + "=");
+                boolean isFirst = true;
+                for (String paramValue : request.getParameterValues(paramName)) {
+                    sb.append((isFirst ? "" : ",") + paramValue);
+                    isFirst = false;
+                }
+                sb.append(";");
+            }
+            sb.append("]");
+            return sb.toString();
+        }catch (Exception e){
+            log.error("获取请求参数异常", e);
+            return "";
+        }
+    }
 }

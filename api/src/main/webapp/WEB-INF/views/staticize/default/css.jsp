@@ -7,7 +7,7 @@
 	<link href="${settings.ICON}" rel="shortcut icon" type="image/x-icon" />
 	<link href="${settings.ICON}" rel="icon" type="image/x-icon" />
 	<link href="${settings.ICON}" rel="shortcut" type="image/x-icon" />
-	<link href="<%=basePath %>resources/framework/bootstrap-3.0.0/css/bootstrap.css" rel="stylesheet" type="text/css" />
+	<link href="<%=basePath %>resources/framework/bootstrap-3.0.0/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
 	<link href="<%=basePath %>resources/framework/bootstrap-3.0.0/css/bootstrap-datetimepicker.min.css" rel="stylesheet" type="text/css" />
 	<!-- base-min.css,admin.css应该发在bootstrap之后,覆盖部分bootstrap样式 -->
 	<link href="<%=basePath %>resources/css/base.css" rel="stylesheet" type="text/css" />
@@ -27,10 +27,10 @@ pre { white-space: normal;}
 .container{min-width: 400px;}   
 .C${module.id}{color:${settings.ADORN_COLOR}!important;font-weight:bold;}
 .C${activePage}{color:${settings.ADORN_COLOR}!important;font-weight:bold;}
-.BG_COLOR {background-color: ${settings.BG_COLOR}}
-.FOOTER_BG_COLOR {background-color: ${settings.FOOTER_BG_COLOR}}
-.FOOTER_COLOR {color: ${settings.FOOTER_COLOR}}
-.FOOTER_COLOR a {color: ${settings.FOOTER_COLOR}}
+.s-bg-color {background-color: ${settings.BG_COLOR}}
+.s-nav-bg-color {background-color: ${settings.NAV_BG_COLOR}}
+.s-nav-color {color: ${settings.NAV_COLOR}}
+.s-nav-color a {color: ${settings.NAV_COLOR}}
 /* 默认主色:#B768A5*/
 .main-bg {background-color: ${settings.MAIN_COLOR}!important;}
 .main-color {color: ${settings.MAIN_COLOR}}
@@ -42,11 +42,8 @@ pre { white-space: normal;}
 .interface-detail blockquote {color: ${settings.MAIN_COLOR}}
 .bt-5 {border-top: 5px solid${settings.MAIN_COLOR}}
 .bl-5 {border-left: 5px solid${settings.MAIN_COLOR}}
-.menu-a:hover {background-color: ${settings.MAIN_COLOR}!important;color:#ffffff!important;opacity:1;}
+.menu_a:hover {background-color: ${settings.MAIN_COLOR}!important;color:#ffffff!important;opacity:1;}
 .iactive {background-color: ${settings.MAIN_COLOR}!important;color:#ffffff!important;opacity: 0.8;}
-.pickActive {color: ${settings.MAIN_COLOR}}
-.pickSelect {color: ${settings.MAIN_COLOR}}
-.separator {border-bottom: 1px dotted${settings.MAIN_COLOR};color: ${settings.MAIN_COLOR}}
 .look-up-content {border-top: 3px solid${settings.MAIN_COLOR};}
 .sk-wave .sk-rect {background-color: ${settings.MAIN_COLOR};}
 .btn-adorn {

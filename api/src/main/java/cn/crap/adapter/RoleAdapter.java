@@ -1,8 +1,8 @@
 package cn.crap.adapter;
 
 import cn.crap.dto.RoleDto;
-import cn.crap.model.mybatis.Role;
-import cn.crap.model.mybatis.RoleWithBLOBs;
+import cn.crap.model.RoleWithBLOBs;
+import cn.crap.utils.BeanUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,13 +21,9 @@ public class RoleAdapter {
         }
 
         RoleDto dto = new RoleDto();
-        dto.setId(model.getId());
-		dto.setRoleName(model.getRoleName());
-		dto.setAuth(model.getAuth());
+        BeanUtil.copyProperties(model, dto);
 		dto.setAuthName(model.getAuthName());
-		dto.setStatus(model.getStatus());
-		dto.setSequence(model.getSequence());
-		
+
         return dto;
     }
 

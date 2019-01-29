@@ -2,17 +2,15 @@ package cn.crap.controller.admin;
 
 import cn.crap.adapter.MenuAdapter;
 import cn.crap.dto.MenuDto;
-import cn.crap.enumer.MenuType;
-import cn.crap.enumer.MyError;
+import cn.crap.enu.MyError;
 import cn.crap.framework.JsonResult;
 import cn.crap.framework.MyException;
 import cn.crap.framework.base.BaseController;
 import cn.crap.framework.interceptor.AuthPassport;
-import cn.crap.model.mybatis.Menu;
-import cn.crap.model.mybatis.MenuCriteria;
-import cn.crap.service.mybatis.MenuService;
+import cn.crap.model.Menu;
+import cn.crap.query.MenuQuery;
+import cn.crap.service.MenuService;
 import cn.crap.utils.Page;
-import cn.crap.utils.TableField;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -21,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
-@RequestMapping
+@RequestMapping("/admin")
 public class MenuController extends BaseController {
     @Autowired
     private MenuService menuService;
@@ -34,27 +32,11 @@ public class MenuController extends BaseController {
     @RequestMapping("/menu/list.do")
     @ResponseBody
     @AuthPassport(authority = C_AUTH_MENU)
-    public JsonResult list(String type, String menuName, String parentId, Integer currentPage) {
-        Page page = new Page(currentPage);
+    public JsonResult list(@ModelAttribute MenuQuery query) throws MyException{
+        Page page = new Page(query);
 
-        MenuCriteria menuCriteria = new MenuCriteria();
-        MenuCriteria.Criteria criteria = menuCriteria.createCriteria();
-
-        if (menuName != null) {
-            criteria.andMenuNameLike("%" + menuName + "%");
-        }
-        if (type != null) {
-            criteria.andTypeEqualTo(type);
-        }
-        if (parentId != null) {
-            criteria.andParentIdEqualTo(parentId);
-        }
-        menuCriteria.setOrderByClause(TableField.SORT.SEQUENCE_DESC);
-        menuCriteria.setLimitStart(page.getStart());
-        menuCriteria.setMaxResults(page.getSize());
-
-        page.setAllRow(menuService.countByExample(menuCriteria));
-        return new JsonResult(1, MenuAdapter.getDto(menuService.selectByExample(menuCriteria)), page);
+        page.setAllRow(menuService.count(query));
+        return new JsonResult(1, MenuAdapter.getDto(menuService.query(query)), page);
     }
 
     /**
@@ -87,7 +69,7 @@ public class MenuController extends BaseController {
     @RequestMapping("/menu/addOrUpdate.do")
     @ResponseBody
     @AuthPassport(authority = C_AUTH_MENU)
-    public JsonResult addOrUpdate(@ModelAttribute MenuDto menuDto) {
+    public JsonResult addOrUpdate(@ModelAttribute MenuDto menuDto) throws MyException{
         // 子菜单类型和父菜单类型一致
         Menu parentMenu = menuService.getById(menuDto.getParentId());
         if (parentMenu != null && parentMenu.getId() != null) {
@@ -100,7 +82,7 @@ public class MenuController extends BaseController {
             menuService.insert(MenuAdapter.getModel(menuDto));
         }
         // 清除缓存
-        objectCache.del(C_CACHE_LEFT_MENU);
+        objectCache.del(C_CACHE_MENU);
         return new JsonResult().data(menuDto);
     }
 
@@ -108,37 +90,12 @@ public class MenuController extends BaseController {
     @ResponseBody
     @AuthPassport(authority = C_AUTH_MENU)
     public JsonResult delete(@RequestParam String id) throws MyException {
-        MenuCriteria menuCriteria = new MenuCriteria();
-        MenuCriteria.Criteria criteria = menuCriteria.createCriteria();
-        criteria.andParentIdEqualTo(id);
-
-        if (menuService.countByExample(menuCriteria) > 0) {
+        if (menuService.count(new MenuQuery().setParentId(id)) > 0) {
             throw new MyException(MyError.E000025);
         }
         menuService.delete(id);
         // 清除缓存
-        objectCache.del(C_CACHE_LEFT_MENU);
+        objectCache.del(C_CACHE_MENU);
         return SUCCESS;
     }
-
-    @RequestMapping("/back/menu/changeSequence.do")
-    @ResponseBody
-    @AuthPassport(authority = C_AUTH_MENU)
-    public JsonResult changeSequence(@RequestParam String id, @RequestParam String changeId) {
-
-        Menu change = menuService.getById(changeId);
-        Menu model = menuService.getById(id);
-        int modelSequence = model.getSequence();
-
-        model.setSequence(change.getSequence());
-        change.setSequence(modelSequence);
-
-        menuService.update(model);
-        menuService.update(change);
-
-        // 清除缓存
-        objectCache.del(C_CACHE_LEFT_MENU);
-        return SUCCESS;
-    }
-
 }

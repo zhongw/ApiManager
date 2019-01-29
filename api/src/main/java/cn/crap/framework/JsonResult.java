@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-import cn.crap.enumer.MyError;
+import cn.crap.enu.MyError;
 import cn.crap.utils.Page;
 import org.springframework.util.StringUtils;
 
@@ -13,7 +13,8 @@ public class JsonResult implements Serializable {
 	private Page page;
 	private Integer success;
 	private Object data;
-	private  ErrorMessage error;
+	private ErrorMessage error;
+	private String tipMessage;
 	//传递至前端的其他参数
 	private Object others;
 
@@ -51,7 +52,7 @@ public class JsonResult implements Serializable {
         String tip = exception.getTip();
 
 		errorMsg += (StringUtils.isEmpty(enMessage) ? "" : "「" + enMessage + "」");
-        errorMsg += (StringUtils.isEmpty(tip) ? "" : "，提示：" + tip + "");
+        errorMsg += (StringUtils.isEmpty(tip) ? "" :  StringUtils.isEmpty(errorMsg) ? tip : ":" + tip);
 
 		this.setError( new ErrorMessage(exception.getErrorCode(), errorMsg));
 	}
@@ -75,6 +76,16 @@ public class JsonResult implements Serializable {
 		this.success = 1;
 		return this;
 	}
+
+	public JsonResult fail(){
+		this.success = 0;
+		return this;
+	}
+
+    public JsonResult tip(String tipMessage){
+        this.tipMessage = tipMessage;
+        return this;
+    }
 
 	public JsonResult others(Object others){
 		this.others = others;
@@ -130,8 +141,14 @@ public class JsonResult implements Serializable {
 	public void setOthers(Object others) {
 		this.others = others;
 	}
-	
-	
+
+    public String getTipMessage() {
+        return tipMessage;
+    }
+
+    public void setTipMessage(String tipMessage) {
+        this.tipMessage = tipMessage;
+    }
 }
 
 class ErrorMessage{
@@ -155,3 +172,5 @@ class ErrorMessage{
 		this.setMessage(message);
 	}
 }
+
+

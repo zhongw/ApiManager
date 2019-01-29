@@ -47,7 +47,7 @@ function callHttp($http, iUrl, iFormId, iPost, iLoading, iTarget, iParams) {
 }
 function httpSuccess(data, iLoading, tipTime) {
 	if(data.success==0){
-		if(data.error.code == INVALID_PASSWORD_CODE || data.error.code == NEED_PASSWORD_CODE){
+		if(data.error.code == NEED_PASSWORD_CODE){
 			lookUp('passwordDiv', '', 300, 300 ,6,'');
 			showMessage('passwordDiv','false',false,-1);
 			showMessage('fade','false',false,-1);
@@ -55,7 +55,9 @@ function httpSuccess(data, iLoading, tipTime) {
 			$("#password").val('');
 			$("#password").focus();
 			data = "[ERROR][" + NEED_PASSWORD_CODE + "] "+data.error.message+"，点击请输入访问密码";
-		}else{
+		}else if(data.error.code == NEED_LOGIN ){
+            data = "[ERROR][" + NEED_LOGIN + "] "+data.error.message;
+        }else{
 			data = "[ERROR]"+data.error.message;
 		}
 	}

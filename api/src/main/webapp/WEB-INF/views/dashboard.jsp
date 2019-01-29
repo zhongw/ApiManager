@@ -1,9 +1,5 @@
 <%@ page language="java" import="java.util.*" pageEncoding="utf-8" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
-<%
-    String path = request.getContextPath();
-    String basePath = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + path + "/";
-%>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,182 +11,171 @@
     <link href="${icon}" rel="shortcut icon" type="image/x-icon"/>
     <link href="${icon}" rel="icon" type="image/x-icon"/>
     <link href="${icon}" rel="shortcut" type="image/x-icon"/>
-    <link href="<%=basePath %>resources/framework/bootstrap-3.0.0/css/bootstrap.css" rel="stylesheet" type="text/css"/>
+    <link href="resources/framework/bootstrap-3.0.0/css/bootstrap.min.css" rel="stylesheet" type="text/css"/>
     <!-- base-min.css,admin.css应该发在bootstrap之后,覆盖部分bootstrap样式 -->
-    <link href="<%=basePath %>resources/css/base.css" rel="stylesheet" type="text/css"/>
-    <link href="<%=basePath %>resources/css/crapApi.css" rel="stylesheet" type="text/css"/>
-    <link href="<%=basePath %>resources/css/setting.css" rel="stylesheet" type="text/css"/>
+    <link href="resources/css/allCss.css?v=v8.0.6" rel="stylesheet" type="text/css"/>
     <title>${title}</title>
 </head>
 <body class="BGFFF">
-<!-- top navbar -->
-<nav class="navbar navbar-inverse no-radius FOOTER_COLOR mb0 z10">
-    <div class="container">
-        <div class="navbar-header">
-            <button type="button" class="navbar-toggle collapsed"
-                    data-toggle="collapse" data-target="#navbar" aria-expanded="false"
-                    aria-controls="navbar">
-                <span class="sr-only">Toggle navigation</span> <span
-                    class="icon-bar"></span> <span class="icon-bar"></span> <span
-                    class="icon-bar"></span>
-            </button>
 
-            <a class="navbar-brand p0 pt10 ml10" href="${domain}">
-                <img class="h30" src="${logo}"/>
-            </a>
-        </div>
-        <div id="navbar" class="navbar-collapse collapse p0">
-            <ul class="nav navbar-nav navbar-right ml20">
-                <li><a href='http://api.crap.cn/static/help/help-articleList--1.html' target="_blank" class="menu-a">帮助文档
-                    <i class="iconfont adorn-color f14">&#xe63e;</i></a>
-                </li>
-                <li>
-                    <a href='https://gitee.com/CrapApi/ApiDebug'
-                       target="_blank" class="menu-a">插件下载 <i class="iconfont adorn-color f14">&#xe624;</i></a>
-                </li>
-                <c:if test="${login}">
-                    <li><a class="cursor" onclick="loginOut()"><i class="iconfont f16 mt-5 adorn-color">&#xe609;</i>&nbsp;&nbsp;注销</a></li>
-                </c:if>
-            </ul>
-        </div>
-    </div>
-</nav>
+<div class="login-bg mb10 w p0" style="height: 600px">
+        <div class="container p0">
+            <div class="row p0 m0 CFFF">
+                <div class="mt100 tc">
+                        <a href="/">
+                            <img class="h100 w100" src="${logo}"/>
+                        </a>
 
-<div class="login-bg h500 mb20 w p0">
-    <div class="trans">
-        <div class="container">
-            <div class="row p0 m0">
-                <div class="col-xs-12 col-md-9 mt100">
-                    <div class="CFFF f30 mt130">开源API接口管理、协同、调试系统</div>
-                    <div class="CFFF f16 mt20 mb20">阿里技术历时2年打造的专业开源、免费接口管理系统：PDF一键生成、在线调试、项目协作...</div>
+                </div>
+                <div class="f60 tc mt30">CRAP-Api</div>
 
+                <div class="f18 mt30 tc">完全开源、免费的API协作管理系统</div>
+
+                <div class="f16 mt10 mb20 tc">协作开发、在线测试、文档管理、导出接口、个性化功能定制...</div>
+
+                <div class="tc mt50">
                     <c:if test="${login}">
-                        <a class="btn btn-adorn btn-sm r20 w150 f14" href="admin.do" target="_self">进入项目管理</a>
-                        <a class="btn btn-adorn btn-sm r20 w150 f14 ml10" href="index.do#/project/list/true/NULL"
-                           target="_self">查看项目</a>
+                        <a class="btn btn-main r5 w150 f14 ml10" href="admin.do" target="_blank">管理项目</a>
+                        <a class="btn btn-adorn r5 w150 f14 ml10" href="index.do#/project/list?projectShowType=3" target="_blank">查看项目</a>
                     </c:if>
                     <c:if test="${login == false}">
-                        <a class="btn btn-adorn btn-sm r20 w150 f14" href="loginOrRegister.do#/register" target="_self">快速注册<i
-                                class="iconfont f18 pl10">&#xe604;</i></a>
-                        <a class="btn btn-adorn btn-sm r20 w150 f14 ml10" href="loginOrRegister.do#/login"
-                           target="_self">登陆<i class="iconfont f18 pl10">&#xe601;</i></a>
+                        <a class="btn btn-main r5 w150 f14 ml10" href="loginOrRegister.do#/login" target="_blank">登录</a>
+                        <a class="btn btn-adorn r5 w150 f14 ml10" href="user/mock.do" target="_blank">免登录试用</a>
                     </c:if>
                 </div>
-                <div class="hidden-sm hidden-xs col-md-3  p50 shadow h300 mt100 r10 dashboard f12">
-                    <div class="adorn-bl-3 f14 pl10 mb20">数据大盘「Dashboard」</div>
-                    注册用户：<span class="adorn-color">${totalUser}</span><br>
-                    管理项目数：<span class="adorn-color">${totalProject}</span><br>
-                    接口总数：<span class="adorn-color">${totalInterface}</span><br>
-                    发布文章数：<span class="adorn-color">${totalArticle}</span><br>
-                    码云统计：<br>
-                    <div class="mt10">
-                        <a href='https://gitee.com/CrapApi/CrapApi/stargazers'><img
-                                src='https://gitee.com/CrapApi/CrapApi/badge/star.svg?theme=dark' alt='star'></img></a>
-                        <a href='https://gitee.com/CrapApi/CrapApi/members'><img src='https://gitee.com/CrapApi/CrapApi/badge/fork.svg?theme=dark' alt='fork'></img></a>
+
+
+                    <div class="tr mt50">
+                        <div class="fr ml20">
+                            <a href='https://gitee.com/CrapApi/CrapApi/stargazers' target="_blank" class="CFFF">
+                                ${starNum} Stars (GitHub & Gitee)
+                            </a>
+                        </div>
+                        <div class="fr ml20">
+                            <a href='https://gitee.com/CrapApi/CrapApi/members' target="_blank" class="CFFF">
+                                ${forkNum} Forks
+                            </a>
+                        </div>
+                        <div class="fr ml20">10k+ Users</div>
                     </div>
-                    <a class="btn btn-main btn-sm w f14 mt20 r20" href="http://v.youku.com/v_show/id_XMzU4NjQwODIzNg==.html" target="_blank">
-                        视频-用户版<i class="iconfont f18">&#xe634;</i></a>
-                </div>
+
             </div>
         </div>
-    </div>
 </div>
 <!-- End: top-->
 
-<div class="container p0 mt10">
-    <div class="row p0 m0">
-        <div class="col-sm-3 col-xs-12 b1 pb20">
-            <c:forEach items="${menuList}" var="menuDto" varStatus="id">
-                <c:if test="${menuDto.menu.type=='FRONT'}">
-                    <div class="cb dashed-b p3 pl10 pr10 mr10 f16 fw600 mt10 mb10">
-                        <span class="adorn-color fn">${menuDto.menu.iconRemark}</span> ${menuDto.menu.menuName}
-                    </div>
-                    <c:forEach items="${menuDto.subMenu}" var="subMenu" varStatus="id">
-                        <a class="dis fl b1 p3 pl10 pr10 r12 mr10 f12 fn no_unl hover-a C999 mb5" href="${subMenu.menuUrl}">${subMenu.menuName}</a>
-                    </c:forEach>
-                </c:if>
-            </c:forEach>
-
-        </div>
-        <div class="col-sm-9 col-xs-12">
-            <div class="cb dashed-b p3 pl10 pr10 mr10 f16 fw600 mt10 mb10 adorn-bl-3">
-                推荐文章
-                <div class="fr f12"><a class="adorn-color fn" href="index.do#NULL/article/list/NULL/ARTICLE/NULL/NULL/2">More...</a></div>
+<!-- 功能点介绍 -->
+<div class="index-top-menu">
+    <div class="container p0">
+        <!--<c:if test="${login}">
+            <img class="main-bg fl w40 h40 r50P mt-5" src="${avatarUrl}"/>
+        </c:if>
+        <c:if test="${!login}">
+            <div class="main-bg fl w40 h40 r50P mt-5 tc pt5 CFFF">
+                Hi
             </div>
-            <c:forEach items="${articleList}" var="article" varStatus="id">
-                <div class="dashed-b">
-                    <a href="index.do#/${article.projectId}/article/detail/${article.moduleId}/${article.type}/${article.id}"
-                       class="p10 pl0 f14 fw600 dis w C000 no_unl">${article.name}</a>
-                    <div class="f12 C999">${article.brief}</div>
-                    <div class="tr C999 f12 p10">点击量:${article.click}次 <span
-                            class="C999 pl20">${article.createTimeStr}</span></div>
-                </div>
-            </c:forEach>
-        </div>
-
-
-        <div class="cb f30 w tc dashed-b fw600 pt20">推荐项目
-            <a class="adorn-color f12 fn" href="index.do#/project/list/false/NULL">More...</a>
-        </div>
-        <c:forEach items="${projectList}" var="item" varStatus="id">
-            <div class="col-sm-6 col-md-4 col-lg-3 m0 p0">
-                <div class="b1 tl r3 h220 m15 p15">
-                    <div>
-                        <a class="fl" href="project.do#/${item.id}/module/list" target="_blank">
-                            <img class="h70 w70 r50P" src="${item.cover}"/>
-                        </a>
-                        <div class="lh26 fl mt20 ml10">
-                            <a class="f12 text-primary mr5 cursor" href="project.do#/${item.id}/error/list"
-                               target="_blank">
-                                <i class="iconfont f12">&#xe608; 错误码</i>
-                            </a>
-                            <br/>
-                            <a class="f12 text-primary mr5 cursor mt10" href="project.do#/${item.id}/module/list"
-                               target="_blank">
-                                <i class="iconfont f12">&#xe613; 模块列表</i>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="cb"></div>
-                    <div class="h30 of-h f14 C000 pt10">
-                        <a href="project.do#/${item.id}/module/list" target="_blank"
-                           class="adorn-color">${item.name}</a>
-                    </div>
-                    <div class="h80 of-h C555 pt10 pb5">
-                            ${item.remark}
-                    </div>
-                </div>
+        </c:if>
+        <c:if test="${login}">
+            <div class="BGFFF fr ml50 pl15 pr15">
+                <a class="C555 adorn-hover-color" href="index.do#/project/list?projectShowType=3"
+                   target="_blank">浏览项目</a>
             </div>
+        </c:if>-->
+        <c:forEach items="${menuList}" var="menuDto" varStatus="id">
+            <c:if test="${menuDto.menu.type=='TOP'}">
+                <div class="BGFFF fr ml50 pl15 pr15">
+                    <a class="C555 adorn-hover-color" href="${menuDto.menu.menuUrl}"
+                       target="_blank">${menuDto.menu.menuName}</a></div>
+            </c:if>
         </c:forEach>
     </div>
+</div>
+<div class="cb"></div>
+
+<div class="fun-introduce container p0 bl1 br1 bb1 mt50">
+    <div class="mt-15 bc BGFFF w400 f30 z10 rel tc fw500 adorn-color">开源免费在线管理平台</div>
+    <c:forEach items="${menuList}" var="menuDto" varStatus="id">
+        <c:if test="${menuDto.menu.type=='FUNCTION'}">
+            <div class="col-xs-3 tc h200 f20 mt10">
+                <div class="h80 lh80 C999 f30">${menuDto.menu.iconRemark}</div>
+                <!--href="${menuDto.menu.menuUrl}"-->
+                <span class="f13 C555 lh26 p15 tc break-word" >${menuDto.menu.menuName}</span>
+            </div>
+        </c:if>
+    </c:forEach>
+    <div class="cb"></div>
+</div>
+
+<div class="BGF9 pt20 mt50">
+    <div class="container p0">
+        <div class="tc f30 fw400 mb10 mt50">项目主页</div>
+        <div class="w50 adorn-bt-3 bc mb20"> </div>
+        <img src="resources/images/admin_project.jpg" class="w shadow mb20">
+
+        <div class="tc f30 fw400 mb10 mt50">接口调试插件</div>
+        <div class="w50 adorn-bt-3 bc mb20"> </div>
+        <img src="resources/images/chrome_debug.jpg" class="w shadow mb50">
+    </div>
+</div>
+
+<div class="BGF9 pt20 pb50">
+    <div class="container BGFFF pt20 pb20 shadow">
+        <table>
+            <tr>
+                <td class="tc w100 f20 fw500 adorn-color">使<br>用<br>指<br>南</td>
+                <td class="bl1 pl50 mt50">
+                    <c:forEach items="${articleList}" var="article" varStatus="id">
+                        <div class="mb20">
+                            <a href="index.do#/article/detail?projectId=${article.projectId}&moduleId=${article.moduleId}&type=${article.type}&id=${article.id}"
+                               class="p10 pl0 f14 fw600 dis w C000 no_unl">${article.name}</a>
+                            <div class="f12 C999">${article.brief}</div>
+                        </div>
+                    </c:forEach>
+                    <div class="tc">
+                        <a class="mt20 btn btn-sm btn-default w600 BGFFF C999 b0" href="index.do#/article/list?type=ARTICLE&status=2">
+                            MORE
+                        </a>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</div>
+
+<div class="container p0">
+        <!-- 求赞赏 -->
+        <div class="cb"></div>
+        <div class="lh26 f12 p30">
+            <div class="bc w150 fw500 f20 bb1 mb50 tc p10 adorn-color">开发者宣言</div>
+            <table>
+                <td class="tl">
+                    各位好，我是Nico，一名年纪轻轻就秃了头的程序猿<br/>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;好人有好报，求各位打赏，帮我集资买瓶生发水吧!<br/>
+                    打赏10元，你的程序从此告别bug；打赏50元，你的头发茂盛得像亚马逊丛林；<br/>
+                    打赏100元，加入"穿着特步相亲也能轻松俘获女神的VIP QQ群（263949884），Nico将竭诚为你提供协助部署、升级帮助、问题解答等各种羞羞的服务...<br/>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;或者<br/>
+                    如果你宁愿情人节独自在办公室加班修bug，也不给我买生发水<br/>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;至少帮我在 <a href='https://gitee.com/CrapApi/CrapApi' target="_blank">Gitee</a>
+                    或
+                    <a target="_blank" href="https://github.com/EhsanTang/ApiManager">GitHub</a> 上点个赞好不好？<br/>
+                    :)
+                </td>
+                <td class="w200 tc h">
+                    <div class="bl1 pl30 ml30">
+                        <img class="w100" src="resources/images/alipay.jpg"><br><br>
+                        <img class="w100" src="resources/images/wepay.jpg">
+                    </div>
+                </td>
+            </table>
+        </div>
 </div>
 
 
 <!-- footer navbar -->
-<div class="p0 m0 mt30 def-bg w FOOTER_BG_COLOR FOOTER_COLOR">
-    <div class="container p0">
-        <div class="row p0 m0">
-            <div class="col-xs-12 f12 p0 mb5 tl mt50 mb50">
-                ©crap.cn&nbsp;版本号 [V8.0.0]
-                <ul class="dis-in-tab">
-                    <li class="dis-in-tab mr20">
-                        <a target="_blank" href="http://api.crap.cn/static/help/help-articleList--1.html">帮助文档</a>
-                    </li>
-                    <li class="dis-in-tab mr20">
-                        <a target="_blank" href="https://github.com/EhsanTang/CrapApi">源码:GitHub</a>
-                    </li>
-                    <li class="dis-in-tab mr20">
-                        <a target="_blank" href="https://git.oschina.net/CrapApi/CrapApi">源码:码云</a>
-                    </li>
-                    <c:forEach items="${menuList}" var="menuDto" varStatus="id">
-                        <c:if test="${menuDto.menu.type=='BOTTOM'}">
-                            <a target="_blank" class="mr20" href="${menuDto.menu.menuUrl}">${menuDto.menu.menuName}</a>
-                        </c:if>
-                    </c:forEach>
-                </ul>
-                <div class="mt20">
+<div class="m0 w lh26">
+        <div class="container mt20 r5 r20 p5 h26 tr">
                     友情链接：
-                    <ul class="dis-in-tab p0">
+                    <ul class="dis-in-tab p0 m0">
                         <li class="dis-in-tab mr20"><a target="_blank" href="http://api.crap.cn">CrapApi官网</a> <span
                                 class="bg_line"></span></li>
                         <c:forEach items="${menuList}" var="menuDto" varStatus="id">
@@ -199,14 +184,37 @@
                             </c:if>
                         </c:forEach>
                     </ul>
-                </div>
-            </div>
         </div>
-    </div>
+
+        <div class="container h26  r20 p0 pl20 tc b1 mb20">
+            ©<a href="http://crap.cn" target="_blank">crap.cn</a>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;版本号 [V8.1.1-bate]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            <ul class="dis-in-tab p0 m0">
+                <li class="dis-in-tab mr20">
+                    <a target="_blank" href="http://api.crap.cn/static/help/help-articleList--1.html">帮助文档</a>
+                </li>
+                <li class="dis-in-tab mr20">
+                    <a target="_blank" href="https://github.com/EhsanTang/CrapApi">GitHub</a>
+                </li>
+                <li class="dis-in-tab mr20">
+                    <a target="_blank" href="https://gitee.com/CrapApi/CrapApi">码云</a>
+                </li>
+                <c:forEach items="${menuList}" var="menuDto" varStatus="id">
+                    <c:if test="${menuDto.menu.type=='BOTTOM'}">
+                        <a target="_blank" class="mr20" href="${menuDto.menu.menuUrl}">${menuDto.menu.menuName}</a>
+                    </c:if>
+                </c:forEach>
+            </ul>
+        </div>
 </div>
 
-<script src="resources/framework/jquery-1.9.1.min.js"></script>
-<script src="resources/js/core.js?v=200"></script>
-<script src="resources/js/crapApi.js?v=200"></script>
+<script>
+    var _hmt = _hmt || [];
+    (function() {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?b4a454e8f7114e487f10d7852f0c55c8";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+    })();
+</script>
 </body>
 </html>

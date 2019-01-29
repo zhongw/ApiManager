@@ -3,7 +3,7 @@
 				<div class="r2 BGFFF p20 C555 mr15 col-md-mr0">
 					<table>
 						<tr>
-							<td class="fb f18 adorn-color w20"><i class="iconfont">&#xe61f;</i></td>
+							<td class="fb f18 adorn-color w20"><i class="iconfont">&#xe6b4;</i></td>
 							<td><a class="fl dis C000 f16 mt2 ml10">${project.name}</a></td>
 						</tr>
 					</table>
@@ -58,7 +58,7 @@
 										<a class="p5 pl30 cursor C${f.id}_article" href="${f.id}-articleList--1.html">文章</a>
 									</c:if>
 									<c:if test="${needStaticizes.indexOf(',dictionary,')>=0}">
-										<a class="p5 pl30 cursor C${f.id}_dictionary" href="${f.id}-dictionaryList-1.html">数据字典</a>
+										<a class="p5 pl30 cursor C${f.id}_dictionary" href="${f.id}-dictionaryList-1.html">数据库表</a>
 									</c:if>
 								</div>
 							</div>

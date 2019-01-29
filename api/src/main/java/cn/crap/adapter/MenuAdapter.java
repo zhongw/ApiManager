@@ -1,8 +1,11 @@
 package cn.crap.adapter;
 
 import cn.crap.dto.MenuDto;
-import cn.crap.enumer.MenuType;
-import cn.crap.model.mybatis.Menu;
+import cn.crap.enu.MenuType;
+import cn.crap.model.Menu;
+import cn.crap.utils.BeanUtil;
+import cn.crap.utils.IConst;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,15 +21,7 @@ public class MenuAdapter {
         }
 
         MenuDto menuDto = new MenuDto();
-        menuDto.setIconRemark(menu.getIconRemark());
-        menuDto.setId(menu.getId());
-        menuDto.setMenuName(menu.getMenuName());
-        menuDto.setMenuUrl(menu.getMenuUrl());
-        menuDto.setParentId(menu.getParentId());
-        menuDto.setRoleIds(menu.getRoleIds());
-        menuDto.setSequence(menu.getSequence());
-        menuDto.setStatus(menu.getStatus());
-        menuDto.setType(menu.getType());
+        BeanUtil.copyProperties(menu, menuDto);
         menuDto.setTypeName(menu.getType() == null ? "" : MenuType.getChineseNameByValue(menu.getType()));
 
         return menuDto;
@@ -38,6 +33,9 @@ public class MenuAdapter {
         }
         Menu menu = new Menu();
         menu.setIconRemark(menuDto.getIconRemark());
+        if (IConst.NULL.equals(menuDto.getIconRemark())){
+            menu.setIconRemark("");
+        }
         menu.setId(menuDto.getId());
         menu.setMenuName(menuDto.getMenuName());
         menu.setMenuUrl(menuDto.getMenuUrl());

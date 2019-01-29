@@ -1,10 +1,10 @@
 package cn.crap.utils;
 
 import cn.crap.dto.LoginInfoDto;
-import cn.crap.enumer.MyError;
+import cn.crap.enu.MyError;
 import cn.crap.framework.MyException;
 import cn.crap.framework.SpringContextHolder;
-import cn.crap.model.mybatis.Project;
+import cn.crap.model.Project;
 import cn.crap.service.tool.UserCache;
 import org.springframework.util.Assert;
 
@@ -14,19 +14,19 @@ import org.springframework.util.Assert;
  */
 public class LoginUserHelper implements IConst{
     /**
-     * 如果未登陆，则返回指定的错误码
+     * 如果未登录，则返回指定的错误码
      * @return
      */
     public static LoginInfoDto getUser(MyError error) throws MyException{
         LoginInfoDto loginInfoDto = tryGetUser();
         if (loginInfoDto == null){
-            throw new MyException(error == null ? MyError.E000064 : error);
+            throw new MyException(error == null ? MyError.E000021 : error);
         }
         return loginInfoDto;
     }
 
     /**
-     * 如果未登陆，则返回错误码
+     * 如果未登录，则返回错误码
      * @return
      * @throws MyException
      */
@@ -35,17 +35,22 @@ public class LoginUserHelper implements IConst{
     }
 
     /**
-     * 如果登陆了，则返回用户信息，否则返回null
+     * 如果登录了，则返回用户信息，否则返回null
      * @return
      */
     public static LoginInfoDto tryGetUser(){
         UserCache userCache = SpringContextHolder.getBean("userCache", UserCache.class);
-        String uId = MyCookie.getCookie(C_COOKIE_USERID, false);
-        return userCache.get(uId);
+        String uid = MyCookie.getCookie(C_COOKIE_USERID, false);
+        String token = MyCookie.getCookie(IConst.COOKIE_TOKEN);
+        LoginInfoDto user = userCache.get(uid);
+        if (user == null || MyString.isEmpty(token) || MyString.isEmpty(uid) || !Aes.desEncrypt(token).equals(uid)) {
+            return null;
+        }
+        return user;
     }
 
     /**
-     * 检查登陆用户是否有用需要的authPassport
+     * 检查登录用户是否有用需要的authPassport
      * @param authPassport
      * @return
      * @throws MyException
@@ -76,9 +81,8 @@ public class LoginUserHelper implements IConst{
      * @return
      * @throws MyException
      */
-    public static boolean isAdmin() throws MyException {
-        LoginInfoDto user = LoginUserHelper.getUser(MyError.E000003);
-        String authority = user.getAuthStr();
+    public static boolean isSuperAdmin() throws MyException {
+        LoginInfoDto user = tryGetUser();
         if( user != null && (","+user.getRoleId()).indexOf(","+ C_SUPER +",")>=0){
             return true;
         }

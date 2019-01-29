@@ -1,56 +1,36 @@
 /****************密码访问*****************/
-function propUpPsswordDiv(obj){
+function propUpPasswordDiv(obj){
 	var msg = obj.textContent;
-	if(msg.indexOf(INVALID_PASSWORD_CODE)>=0 || msg.indexOf(NEED_PASSWORD_CODE)>=0){
-		lookUp('passwordDiv', '', 300, 300 ,6,'');
-		showMessage('passwordDiv','false',false,-1);
-		showMessage('fade','false',false,-1);
-		changeimg('imgCode','verificationCode');
-		$("#password").val('');
-		$("#password").focus();
+	if(msg.indexOf(NEED_PASSWORD_CODE)>=0){
+        var obj = document.getElementById('passwordDiv');
+        if (obj){
+            lookUp('passwordDiv', '', 300, 300 ,6,'');
+            showMessage('passwordDiv','false',false,-1);
+            showMessage('fade','false',false,-1);
+            changeimg('imgCode','verificationCode');
+            $("#password").val('');
+            $("#password").focus();
+		}
+	}else if(msg.indexOf(NEED_LOGIN)>=0 ){
+		openPage('loginOrRegister.do#/login');
 	}
 }
 
-/****************数据字典****************/
-function addOneField(name, type, notNull,flag, def, remark, rowNum) {
-	if (!rowNum || rowNum == '') {
-		var mydate = new Date();
-		rowNum = mydate.getTime();
-	}
-		$("#content")
-				.append("<tr>"
-						+"<td><input class='form-control' type='text' name='name' value='"+ name + "' placeholder=\"字段名\"></td>"
-						+"<td><input class='form-control' type='text' name='type' value='"+ type + "' placeholder=\"类型\"></td>"
-						+"<td><select name='notNull' class='form-control'><option value='true'"+ (notNull=='true' ? " selected":"") + ">true</option><option value='false'"+ (notNull=='true' ? "":" selected") +">false</option></select></td>"
-						+"<td><input class='form-control' type='text' name='def' value='"+ def + "' placeholder=\"默认值\"></td>"
-						+"<td><select name='flag' class='form-control'><option value='common'"+ ( flag == 'common'  ? " selected":"") + ">普通</option><option value='primary'"+ ( flag == 'primary'  ? " selected":"") + ">主键</option><option value='foreign'"+ (flag == 'foreign' ? " selected":"") +">外键</option><option value='associate'"+ ( flag == 'associate'  ? " selected":"") + ">关联</option></select></td>"
-						+"<td><input class='form-control' type='text' name='remark' value='"+ remark + "' placeholder=\"注释\"></td>"
-						+"<td class='cursor text-danger'>"
-						+		"<i class='iconfont' onclick='deleteOneParam(this)'>&#xe60e;</i>&nbsp;&nbsp; "
-						+		"<i class='iconfont' onclick='upward(this)'>&#xe623;</i>&nbsp;&nbsp;"
-						+		"<i class='iconfont' onclick='downward(this)'>&#xe624;</i>"
-						+"</td>"
-						+"</tr>");
-}
-
-function deleteOneParam(nowTr) {
-	$(nowTr).parent().parent().remove();
-}
-
-function upward(nowTr){
-	var $tr = $(nowTr).parent().parent(); 
-    if ($tr.index() != 0) { 
-      $tr.fadeOut(1).fadeIn(600); 
-      $tr.prev().fadeOut(1).fadeIn(1000); 
-      $tr.prev().before($tr); 
-    } 
-}
-function downward(nowTr){
-	var $tr = $(nowTr).parent().parent(); 
-      $tr.fadeOut(1).fadeIn(600);  
-      $tr.next().fadeOut(1).fadeIn(1000); 
-      $tr.next().after($tr); 
-}
+// 数据字典改为拖动
+// function upward(nowTr){
+// 	var $tr = $(nowTr).parent().parent();
+//     if ($tr.index() != 0) {
+//       $tr.fadeOut(1).fadeIn(600);
+//       $tr.prev().fadeOut(1).fadeIn(1000);
+//       $tr.prev().before($tr);
+//     }
+// }
+// function downward(nowTr){
+// 	var $tr = $(nowTr).parent().parent();
+//       $tr.fadeOut(1).fadeIn(600);
+//       $tr.next().fadeOut(1).fadeIn(1000);
+//       $tr.next().after($tr);
+// }
 /****************End****************/
 
 function unescapeAndDecode(name){
@@ -60,29 +40,39 @@ function unescapeAndDecode(name){
 	}
 	return "";
 }
-function getParamFromTable(tableId) {
+function getParamFromTable(tableId, requiredName) {
 	var json = "[";
 	var i = 0;
 	var j = 0;
 	$('#' + tableId).find('tbody').find('tr').each(function() {
-		i = i + 1;
-		j = 0;
-		if (i != 1)
-			json += ","
-		json += "{";
-		$(this).find('td').find('input').each(function(i, val) {
-				j = j + 1;
-				if (j != 1)
-					json += ",";
-				json += "\"" + val.name + "\":\"" + replaceAll(val.value,'"','\\"') + "\""
-		});
-		$(this).find('td').find('select').each(function(i, val) {
-			j = j + 1;
-			if (j != 1)
-				json += ",";
-			json += "\"" + val.name + "\":\"" + replaceAll(val.value,'"','\\"') + "\""
-	});
-		json += "}"
+        // 查看必填项是否填写，没填写则忽略该行
+        var ignore = false;
+        $(this).find('td').find('input').each(function(i, val) {
+            if (val.name == requiredName && val.value == ''){
+                ignore = true;
+            }
+        });
+        if (!ignore){
+            i = i + 1;
+            j = 0;
+            if (i != 1) {
+                json += ",";
+            }
+            json += "{";
+            $(this).find('td').find('input').each(function(i, val) {
+                j = j + 1;
+                if (j != 1)
+                    json += ",";
+                json += "\"" + val.name + "\":\"" + replaceAll(val.value,'"','\\"') + "\""
+            });
+            $(this).find('td').find('select').each(function(i, val) {
+                j = j + 1;
+                if (j != 1)
+                    json += ",";
+                json += "\"" + val.name + "\":\"" + replaceAll(val.value,'"','\\"') + "\""
+            });
+            json += "}"
+        }
 	});
 	json += "]";
 	return json;
@@ -161,7 +151,9 @@ function checkText(obj, oldNavigateText, span, checkBox, length) {
 			container.scrollTop(scrollTo.offset().top - container.offset().top
 					+ container.scrollTop() - 100);
 			$("#pickContent div").removeClass("pickSelect");
+            $("#pickContent div").removeClass("main-color");
 			$(obj).addClass("pickSelect");
+            $(obj).addClass("main-color");
 			select = 1;
 		}
 	}
@@ -230,51 +222,37 @@ function needHiddenModule() {
 		iShow("roleModuleId");
 	}
 }
-// 创建kindEditory
-// 子页面加载一次，需要初始化编辑器（点击左边菜单是更新editorId）
-function createKindEditor(id,modelField){
-	var root = getRootScope();
-	if(window.oldEditorId != window.editorId || window.editor == null){
-		if(window.editorId)
-			window.oldEditorId = window.editorId;
-		window.editor =  KindEditor.create('#'+id,{
-	        uploadJson : 'file/upload.do',
-	        filePostName: 'img',
-	        allowFileManager : true,
-	        afterBlur: function () { 
-	        	editor.sync();
-	        	root.model[modelField] = $('#'+id).val();
-	        }
-		});
-	}
-	window.editor.html(root.model[modelField]);
-	changeDisplay('kindEditor','defEditor')
-}
-// 保存markdown
-function saveMarkdown(markdown,content){
-	var rootScope = getRootScope();
-	rootScope.$apply(function () {    
-	    rootScope.model[markdown] = getMarkdownText( $(window.frames["markdownFrame"].document).find('.ace_text-layer').html() );
-	    rootScope.model[content] = $(window.frames["markdownFrame"].document).find('#preview').html();
-	});
-	closeMyDialog('markdownDialog');
-}
+
 // 重建索引
 function rebuildIndex(obj){
-	if (myConfirm("确定重建索引？")) {
-		selectButton(obj,'menu-a');
-		callAjaxByName('iUrl=back/rebuildIndex.do|iLoading=PROPUPFLOAT重建索引中，刷新页面可以查看实时进度...|ishowMethod=updateDivWithImg');
+	if (myConfirm("确定重建索引（安全，不会影响系统运行）？")) {
+		selectButton(obj,'menu_a');
+		callAjaxByName('iUrl=admin/rebuildIndex.do|iLoading=PROPUPFLOAT重建索引中，刷新页面可以查看实时进度...|ishowMethod=updateDivWithImg');
 	}
 }
 
 function loginOut(){
-    callAjaxByName("iUrl=back/loginOut.do|isHowMethod=updateDiv|iLoading=false|ishowMethod=doNothing|iAsync=false");
+    callAjaxByName("iUrl=user/loginOut.do|isHowMethod=updateDiv|iLoading=false|ishowMethod=doNothing|iAsync=false");
     location.reload();
 }
 //刷新缓存
 function flushDB(obj){
-	if (myConfirm("确定刷新缓存？")) {
-		selectButton(obj,'menu-a');
-		callAjaxByName('iUrl=back/flushDB.do|iLoading=TIPFLOAT刷新中，请稍后...|ishowMethod=updateDivWithImg');
+	if (myConfirm("确定刷新缓存（安全，不会影响系统运行）？")) {
+		selectButton(obj,'menu_a');
+		callAjaxByName('iUrl=admin/flushDB.do|iLoading=TIPFLOAT刷新中，请稍后...|ishowMethod=updateDivWithImg');
 	}
+}
+
+//删除30天前的日志
+function cleanLog(obj){
+    if (myConfirm("确定删除30天的日志（文章、接口等日志，删除后无法恢复）？")) {
+        selectButton(obj,'menu_a');
+        callAjaxByName('iUrl=admin/cleanLog.do|iLoading=TIPFLOAT删除中，请稍后...|ishowMethod=updateDivWithImg');
+    }
+}
+
+//压缩css
+function compress(obj){
+	selectButton(obj,'menu_a');
+	callAjaxByName('iUrl=admin/compress.do|iLoading=TIPFLOAT压缩中，请稍后...|ishowMethod=updateDivWithImg');
 }

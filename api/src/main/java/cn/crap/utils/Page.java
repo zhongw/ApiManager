@@ -1,25 +1,29 @@
 package cn.crap.utils;
 
+import cn.crap.query.BaseQuery;
 import org.springframework.util.Assert;
 
 import java.io.Serializable;
-import java.util.List;
 
-public class Page<T> implements Serializable{
+public class Page implements Serializable{
 	private static final long serialVersionUID = 1L;
 	private int allRow = 0; // allRow will always big than -1
 	private int currentPage; // currentPage will always big than 0
 	private int size; // size will always big than 0
 	private int totalPage = 0; // totalPage will always big than -1
-	private List<T> list;
 
 	public Page(Integer currentPage){
-		this(15, currentPage == null ? 1 : currentPage);
+		this(20, currentPage == null ? 1 : currentPage);
 	}
+
+	public Page(BaseQuery baseQuery){
+		this(baseQuery.getPageSize(), baseQuery.getCurrentPage());
+	}
+
 	public Page(Integer size, Integer currentPage){
-		Assert.notNull(size);
-		Assert.notNull(currentPage);
-		Assert.isTrue(size > 0 && size <= 1000);
+		currentPage = (currentPage == null ? 1 : currentPage);
+        size = (size == null ? 20 : size);
+		Assert.isTrue(size <= 1000, "pageSzie 不能大于1000");
 		Assert.notNull(currentPage > 0);
 
 		this.currentPage = currentPage;
@@ -65,13 +69,5 @@ public class Page<T> implements Serializable{
 
 	public int getTotalPage() {
 		return totalPage;
-	}
-
-	public List<T> getList() {
-		return list;
-	}
-
-	public void setList(List<T> list) {
-		this.list = list;
 	}
 }

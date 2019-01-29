@@ -1,8 +1,10 @@
 package cn.crap.dto;
 
-import java.io.Serializable;
+import cn.crap.enu.DataType;
+import cn.crap.utils.Tools;
+import org.apache.commons.lang.StringUtils;
 
-import cn.crap.enumer.DataType;
+import java.io.Serializable;
 
 /**
  * 前端下拉选着框DTO
@@ -18,20 +20,21 @@ public class PickDto implements Serializable{
 	private String id;
 	private String value;
 	private String name;
-	
+
 	public PickDto(){}
 	public PickDto(String id,String value,String name){
-		this.id=id;
+        this.id = handleId(id);
 		this.value=value;
 		this.name=name;
 	}
-	public PickDto(String id,String name){
-		this.id=id;
+
+    public PickDto(String id,String name){
+        this.id = handleId(id);
 		this.value=id;
 		this.name=name;
 	}
 	public PickDto(DataType dateType){
-		this.id=dateType.name();
+        this.id = handleId(name);
 		this.value=dateType.name();
 		this.name=dateType.getName();
 	}
@@ -53,6 +56,13 @@ public class PickDto implements Serializable{
 	public void setValue(String value) {
 		this.value = value;
 	}
-	
-	
+
+    private String handleId(String id) {
+        if (id == null){
+            id = System.currentTimeMillis() + Tools.getChar(10);
+        }
+        id = id.replaceAll("\\.", "_");
+        id = StringUtils.deleteWhitespace(id);
+        return id;
+    }
 }

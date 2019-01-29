@@ -2,26 +2,24 @@ package cn.crap.controller.user;
 
 import cn.crap.adapter.ErrorAdapter;
 import cn.crap.adapter.InterfaceAdapter;
-import cn.crap.dto.CategoryDto;
-import cn.crap.dto.DictionaryDto;
-import cn.crap.dto.InterfacePDFDto;
-import cn.crap.dto.SettingDto;
-import cn.crap.enumer.ArticleType;
-import cn.crap.enumer.MyError;
-import cn.crap.enumer.ProjectType;
+import cn.crap.beans.Config;
+import cn.crap.dto.*;
+import cn.crap.enu.ArticleType;
+import cn.crap.enu.MyError;
+import cn.crap.enu.ProjectType;
 import cn.crap.framework.JsonResult;
 import cn.crap.framework.MyException;
 import cn.crap.framework.base.BaseController;
-import cn.crap.model.mybatis.*;
-import cn.crap.model.mybatis.Error;
-import cn.crap.service.custom.CustomArticleService;
-import cn.crap.service.custom.CustomErrorService;
-import cn.crap.service.custom.CustomInterfaceService;
-import cn.crap.service.custom.CustomModuleService;
-import cn.crap.service.mybatis.ArticleService;
-import cn.crap.service.mybatis.InterfaceService;
-import cn.crap.service.mybatis.ModuleService;
-import cn.crap.beans.Config;
+import cn.crap.model.*;
+import cn.crap.model.Error;
+import cn.crap.query.ArticleQuery;
+import cn.crap.query.ErrorQuery;
+import cn.crap.query.InterfaceQuery;
+import cn.crap.query.ModuleQuery;
+import cn.crap.service.ArticleService;
+import cn.crap.service.ErrorService;
+import cn.crap.service.InterfaceService;
+import cn.crap.service.ModuleService;
 import cn.crap.utils.*;
 import net.sf.json.JSONArray;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,22 +41,14 @@ import java.util.Map;
 @RequestMapping("/user/staticize")
 public class StaticizeController extends BaseController{
 	@Autowired
-	private CustomInterfaceService customInterfaceService;
-	@Autowired
 	private ModuleService moduleService;
-	@Autowired
-	private Config config;
 	@Autowired
 	private InterfaceService interfaceService;
 	@Autowired
-	private CustomErrorService customErrorService;
+	private ErrorService errorService;
 	@Autowired
 	private ArticleService articleService;
-	@Autowired
-	private CustomArticleService customArticleService;
-	@Autowired
-	private CustomModuleService customModuleService;
-	
+
 	/**
 	 * 静态化错误码列表
 	 */
@@ -70,7 +60,7 @@ public class StaticizeController extends BaseController{
 			throw new MyException(MyError.E000056);
 		}
 		Project project = projectCache.get(projectId);
-		String path = getStaticPath(project);
+		String path = Tools.getStaticPath(project);
 		if(project.getType() != ProjectType.PUBLIC.getType()){
 			Tools.deleteFile(path);
 			// 删除旧的静态化文件
@@ -79,8 +69,12 @@ public class StaticizeController extends BaseController{
 		
 		Map<String, Object> returnMap = getProjectModuleInfor(null, project, "-错误码");
 		
-		Page page = new Page(15, currentPage);
-		List<Error> errorModels = customErrorService.queryByProjectId(projectId, null, null, page);
+
+		ErrorQuery errorQuery = new ErrorQuery().setProjectId(projectId);
+		errorQuery.setCurrentPage(currentPage);
+		Page page = new Page(errorQuery);
+		List<Error> errorModels = errorService.query(errorQuery);
+		page.setAllRow(errorService.count(errorQuery));
 
 		returnMap.put("page", page);
 		returnMap.put("errorList", ErrorAdapter.getDto(errorModels));
@@ -90,9 +84,7 @@ public class StaticizeController extends BaseController{
 		return new ModelAndView("WEB-INF/views/staticize/default/errorList.jsp",returnMap);
 	}
 
-	private String getStaticPath(Project project) {
-		return Tools.getServicePath() + "static/"+project.getId();
-	}
+	
 
 	/**
 	 * 静态化接口列表
@@ -107,7 +99,7 @@ public class StaticizeController extends BaseController{
 		
 		Module module = moduleCache.get(moduleId);
 		Project project = projectCache.get(module.getProjectId());
-		String path = getStaticPath(project);
+		String path = Tools.getStaticPath(project);
 
 		if(project.getType() != ProjectType.PUBLIC.getType()){
 			Tools.deleteFile(path);
@@ -118,9 +110,12 @@ public class StaticizeController extends BaseController{
 		Map<String, Object> returnMap = getProjectModuleInfor(module, project, "-接口");
 		
 		Map<String, Object> map = Tools.getMap("moduleId", moduleId);
-		Page page = new Page(15, currentPage);
+
+        InterfaceQuery interfaceQuery = new InterfaceQuery().setCurrentPage(currentPage).setModuleId(moduleId);
+        Page page = new Page(interfaceQuery);
+        page.setAllRow(interfaceService.count(interfaceQuery));
 		returnMap.put("page", page);
-		returnMap.put("interfaceList", InterfaceAdapter.getDto(customInterfaceService.selectByModuleId(moduleId), module));
+		returnMap.put("interfaceList", InterfaceAdapter.getDto(interfaceService.query(interfaceQuery), module, null));
 		returnMap.put("activePage",moduleId+"_interface");
 		returnMap.put("url", module.getId() + "-interfaceList");
 		returnMap.put("needStaticizes", needStaticizes);
@@ -140,7 +135,7 @@ public class StaticizeController extends BaseController{
 		}
 		Module module = moduleCache.get(moduleId);
 		Project project = projectCache.get(module.getProjectId());
-		String path = getStaticPath(project);
+		String path = Tools.getStaticPath(project);
 
 		if(project.getType() != ProjectType.PUBLIC.getType()){
 			Tools.deleteFile(path);
@@ -165,7 +160,7 @@ public class StaticizeController extends BaseController{
 		if(type.equals("ARTICLE")){
 			// 获取所有类目
 			// 静态化模块文章
-			List<String> categorys = customModuleService.queryCategoryByModuleId(module.getId());
+			List<String> categorys = moduleService.queryCategoryByModuleId(module.getId());
 			List<CategoryDto> categoryDtos = new ArrayList<CategoryDto>();
 			// 文章分类，按类目静态化
 			for(String c: categorys){
@@ -186,8 +181,11 @@ public class StaticizeController extends BaseController{
 		}
 		
 		Map<String, Object> map = Tools.getMap("moduleId", moduleId, "type", type, "category", category);
-		Page page = new Page(15, currentPage);
-		List<Article> articleList = customArticleService.queryArticle(moduleId, null, type, category, null, page);
+
+        ArticleQuery articleQuery = new ArticleQuery().setCurrentPage(currentPage).setModuleId(moduleId).setType(type).setCategory(category);
+        Page page = new Page(articleQuery);
+        page.setAllRow(articleService.count(articleQuery));
+		List<Article> articleList = articleService.query(articleQuery);
 		returnMap.put("page", page);
 		returnMap.put("articleList", articleList);
 		returnMap.put("needStaticizes", needStaticizes);
@@ -213,7 +211,7 @@ public class StaticizeController extends BaseController{
 		ArticleWithBLOBs article = articleService.getById(articleId);
 		Module module = moduleCache.get(article.getModuleId());
 		Project project = projectCache.get(module.getProjectId());
-		String path = getStaticPath(project);
+		String path = Tools.getStaticPath(project);
 
 		if(project.getType() != ProjectType.PUBLIC.getType()){
 			Tools.deleteFile(path);
@@ -223,11 +221,16 @@ public class StaticizeController extends BaseController{
 		if(article.getType().equals(ArticleType.ARTICLE.name())){
 			Map<String, Object> returnMap = getProjectModuleInfor(module, project, "-文章详情");
 			returnMap.put("article", article);
+			// 项目备注将静态化成网站的description
+			returnMap.put("description", article.getBrief());
+			// 模块名称将静态化成网站标题
+			returnMap.put("title", article.getName());
+
 			returnMap.put("activePage",module.getId()+"_article");
 			returnMap.put("needStaticizes", needStaticizes);
 			return new ModelAndView("WEB-INF/views/staticize/default/articleDetail.jsp",returnMap);
 		}else{
-			Map<String, Object> returnMap = getProjectModuleInfor(module, project, "-数据字典详情");
+			Map<String, Object> returnMap = getProjectModuleInfor(module, project, "-数据库表详情");
 			returnMap.put("article", article);
 			returnMap.put("activePage",module.getId()+"_dictionary");
 			returnMap.put("dictionaryFields", JSONArray.toArray(JSONArray.fromObject(article.getContent()), DictionaryDto.class));
@@ -253,7 +256,7 @@ public class StaticizeController extends BaseController{
 		InterfaceWithBLOBs interFace = interfaceService.getById(interfaceId);
 		Module module = moduleCache.get(interFace.getModuleId());
 		Project project = projectCache.get(module.getProjectId());
-		String path = getStaticPath(project);
+		String path = Tools.getStaticPath(project);
 
 		if(project.getType() != ProjectType.PUBLIC.getType()){
 			Tools.deleteFile(path);
@@ -262,7 +265,7 @@ public class StaticizeController extends BaseController{
 		}
 		Map<String, Object> returnMap = getProjectModuleInfor(module, project, "-接口详情");
 		List<InterfacePDFDto> interfaces = new ArrayList<InterfacePDFDto>();
-		interfaces.add(customInterfaceService.getInterDto(interFace, module, false));
+		interfaces.add(interfaceService.getInterPDFDto(interFace, module, false));
 
 		returnMap.put("interfaces", interfaces);
 		returnMap.put("activePage",module.getId()+"_interface");
@@ -280,8 +283,8 @@ public class StaticizeController extends BaseController{
 	@ResponseBody
 	public JsonResult delStaticize(HttpServletRequest req, @RequestParam String projectId, String needStaticizes) throws UnsupportedEncodingException, Exception {
 		Project project = projectCache.get(projectId);
-		checkUserPermissionByProject(project);
-		String path = getStaticPath(project);
+		checkPermission(project);
+		String path = Tools.getStaticPath(project);
 		Tools.deleteFile(path);
 		return new JsonResult(1, null );
 	}
@@ -295,8 +298,8 @@ public class StaticizeController extends BaseController{
 	@ResponseBody
 	public JsonResult downloadStaticize(HttpServletRequest req, @RequestParam String projectId, String needStaticizes) throws UnsupportedEncodingException, Exception {
 		Project project = projectCache.get(projectId);
-		checkUserPermissionByProject(project);
-		String path = getStaticPath(project);
+		checkPermission(project);
+		String path = Tools.getStaticPath(project);
 		File file = new File(path);
     	if( !file.exists()){
     		throw new MyException(MyError.E000057);
@@ -306,7 +309,7 @@ public class StaticizeController extends BaseController{
     	Tools.createFile(path + "/downLoad/");
     	
     	
-        //获取html，提取url，替换线上资源路径，准本下载文件夹
+        //获取html，提取url，替换线上文件路径，准本下载文件夹
         String[] childFilePaths = file.list();  
         List<String> filePaths = new ArrayList<>();
         for(String childFilePath : childFilePaths){  
@@ -319,7 +322,7 @@ public class StaticizeController extends BaseController{
            Tools.staticize(html, path + "/downLoad/" + new File(childFilePath).getName());
         }  
         
-        // 拷贝资源文件
+        // 拷贝文件文件
         for(String sourcePath:filePaths){
         	if(sourcePath.startsWith(webBasePath) && !sourcePath.endsWith(".do")){
         		sourcePath = sourcePath.replace(webBasePath, "").split("\"")[0].split("\\?")[0].trim();
@@ -358,9 +361,9 @@ public class StaticizeController extends BaseController{
 		String secretKey = settingCache.get(S_SECRETKEY).getValue();
 		Project project = projectCache.get(projectId);
 		
-		checkUserPermissionByProject(project);
+		checkPermission(project);
 		
-		String path = getStaticPath(project);
+		String path = Tools.getStaticPath(project);
 		Tools.createFile(path);
 		if(project.getType() != ProjectType.PUBLIC.getType()){
 			Tools.deleteFile(path);
@@ -371,14 +374,14 @@ public class StaticizeController extends BaseController{
 		int pageSize = 15;
 		int totalPage = 0;
 		if(needStaticizes.indexOf(",error,") >= 0){
-			int errorSize = customErrorService.countByProjectId(projectId);
+			int errorSize = errorService.count(new ErrorQuery().setProjectId(projectId).setPageSize(IConst.ALL_PAGE_SIZE));
 			// 计算总页数
 			totalPage = (errorSize+pageSize-1)/pageSize;
 			if(totalPage == 0){
 				totalPage = 1;
 			}
 			for(int i=1 ; i<= totalPage; i++){
-				String html = HttpPostGet.get(config.getDomain()+ "/user/staticize/errorList.do?projectId="+projectId
+				String html = HttpPostGet.get(Config.domain+ "/user/staticize/errorList.do?projectId="+projectId
 						+"&currentPage="+i + "&needStaticizes=" + needStaticizes + "&secretKey=" + secretKey, null, null, 10 * 1000);
 				// list-类目摘要-页码
 				Tools.staticize(html, path + "/errorList-" + i + ".html");
@@ -387,26 +390,26 @@ public class StaticizeController extends BaseController{
 		
 		Map<String, Object> map = new HashMap<>();
 
-		ModuleCriteria example = new ModuleCriteria();
-		example.createCriteria().andProjectIdEqualTo(projectId);
-		for(Module module : moduleService.selectByExample(example)){
+		for(Module module : moduleService.query(new ModuleQuery().setProjectId(projectId).setPageSize(IConst.ALL_PAGE_SIZE))){
 			if(needStaticizes.indexOf(",article,") >= 0){
 				// 静态化模块文章，分类
-				List<String> categorys = customModuleService.queryCategoryByModuleId(module.getId());
+				List<String> categorys = moduleService.queryCategoryByModuleId(module.getId());
 				// 文章分类，按类目静态化
 				for(String category: categorys){
 					if( MyString.isEmpty( category )){
 						continue; // 空类目不静态化
 					}
 					// 查询页码
-					int articleSize = customArticleService.countByModuleId(module.getId(), null, "ARTICLE", category, null);
+                    ArticleQuery articleQuery = new ArticleQuery();
+					articleQuery.setModuleId(module.getId()).setType(ArticleType.ARTICLE.name()).setCategory(category);
+					int articleSize = articleService.count(articleQuery);
 					// 计算总页数
 					totalPage = (articleSize+pageSize-1)/pageSize;
 					if(totalPage == 0){
 						totalPage = 1;
 					}
 					for(int i=1 ; i<= totalPage; i++){
-						String html = HttpPostGet.get(config.getDomain()+ "/user/staticize/articleList.do?moduleId="+ module.getId()+"&category="+
+						String html = HttpPostGet.get(Config.domain+ "/user/staticize/articleList.do?moduleId="+ module.getId()+"&category="+
 								category+"&currentPage="+i + "&needStaticizes="+needStaticizes + "&secretKey=" + secretKey, null, null, 10 * 1000);
 						// list-类目摘要-页码
 						Tools.staticize(html, path + "/" + module.getId() +"-articleList-"+ MD5.encrytMD5(category, "").substring(0, 10) + "-" + i + ".html");
@@ -414,14 +417,16 @@ public class StaticizeController extends BaseController{
 				}
 				
 				// 文章分类，不分类
-				int articleSize = customArticleService.countByModuleId(module.getId(), null, "ARTICLE", null, null);
+                ArticleQuery articleQuery = new ArticleQuery();
+                articleQuery.setModuleId(module.getId()).setType(ArticleType.ARTICLE.name());
+				int articleSize = articleService.count(articleQuery);
 				// 计算总页数
 				totalPage = (articleSize+pageSize-1)/pageSize;
 				if(totalPage == 0){
 					totalPage = 1;
 				}
 				for(int i=1 ; i<= totalPage; i++){
-					String html = HttpPostGet.get(config.getDomain()+ "/user/staticize/articleList.do?moduleId="+ module.getId()+
+					String html = HttpPostGet.get(Config.domain+ "/user/staticize/articleList.do?moduleId="+ module.getId()+
 							"&category="+ IConst.ALL+"&currentPage="+i + "&needStaticizes="+needStaticizes+ "&secretKey=" + secretKey, null, null, 10 * 1000);
 					// list-类目摘要-页码
 					Tools.staticize(html, path + "/" +  module.getId() +"-articleList--" + i + ".html");
@@ -429,8 +434,9 @@ public class StaticizeController extends BaseController{
 				
 				
 				// 静态化文章
-				for(Article article: customArticleService.queryByModuleIdAndType(module.getId(), "ARTICLE")){
-					String html = HttpPostGet.get(config.getDomain()+ "/user/staticize/articleDetail.do?articleId="+ article.getId() + 
+                articleQuery.setPageSize(ALL_PAGE_SIZE);
+                for(Article article: articleService.query(articleQuery)){
+					String html = HttpPostGet.get(Config.domain+ "/user/staticize/articleDetail.do?articleId="+ article.getId() +
 							"&needStaticizes="+needStaticizes+ "&secretKey=" + secretKey, null, null, 10 * 1000);
 					Tools.staticize(html, path + "/" + article.getId()+".html");
 				}
@@ -439,23 +445,25 @@ public class StaticizeController extends BaseController{
 			}
 			
 			if(needStaticizes.indexOf(",dictionary,") >= 0){
-				// 数据字典列表
-				int articleSize = customArticleService.countByModuleId(module.getId(), null, "DICTIONARY", null, null);
+				// 数据库表列表
+                ArticleQuery articleQuery = new ArticleQuery().setModuleId(module.getId()).setType(ArticleType.DICTIONARY.name()).setPageSize(IConst.ALL_PAGE_SIZE);
+                int articleSize = articleService.count(articleQuery);
 				// 计算总页数
 				totalPage = (articleSize+pageSize-1)/pageSize;
 				if(totalPage == 0){
 					totalPage = 1;
 				}
 				for(int i=1 ; i<= totalPage; i++){
-					String html = HttpPostGet.get(config.getDomain()+ "/user/staticize/articleList.do?moduleId="+ module.getId()+
+					String html = HttpPostGet.get(Config.domain+ "/user/staticize/articleList.do?moduleId="+ module.getId()+
 							"&category="+ IConst.ALL+"&currentPage="+i+"&type=DICTIONARY" + "&needStaticizes="+needStaticizes+ "&secretKey=" + secretKey, null, null, 10 * 1000);
 					// list-类目摘要-页码
 					Tools.staticize(html, path + "/" +  module.getId() +"-dictionaryList-" + i + ".html");
 				}
 				
-				// 静态化数据字典详情
-				for(Article article: customArticleService.queryByModuleIdAndType(module.getId(),  "DICTIONARY")){
-					String html = HttpPostGet.get(config.getDomain()+ "/user/staticize/articleDetail.do?articleId="+ article.getId() +
+				// 静态化数据库表详情
+                articleQuery.setPageSize(ALL_PAGE_SIZE);
+				for(Article article: articleService.query(articleQuery)){
+					String html = HttpPostGet.get(Config.domain+ "/user/staticize/articleDetail.do?articleId="+ article.getId() +
 							"&needStaticizes="+needStaticizes+ "&secretKey=" + secretKey, null, null, 10 * 1000);
 					Tools.staticize(html, path + "/" + article.getId()+".html");
 				}
@@ -464,12 +472,13 @@ public class StaticizeController extends BaseController{
 			if(needStaticizes.indexOf("interface") >= 0){
 				// 接口列表
 				// 计算总页数
-				totalPage = (customInterfaceService.countByModuleId(module.getId())+pageSize-1)/pageSize;
+                InterfaceQuery interfaceQuery = new InterfaceQuery().setModuleId(module.getId()).setPageSize(IConst.ALL_PAGE_SIZE);
+                totalPage = (interfaceService.count(interfaceQuery)+pageSize-1)/pageSize;
 				if(totalPage == 0){
 					totalPage = 1;
 				}
 				for(int i=1 ; i<= totalPage; i++){
-					String html = HttpPostGet.get(config.getDomain()+ "/user/staticize/interfaceList.do?moduleId="+ module.getId()+"&currentPage="+i +
+					String html = HttpPostGet.get(Config.domain+ "/user/staticize/interfaceList.do?moduleId="+ module.getId()+"&currentPage="+i +
 							"&needStaticizes="+needStaticizes+ "&secretKey=" + secretKey, null, null, 10 * 1000);
 					// list-类目摘要-页码
 					Tools.staticize(html, path + "/" +  module.getId() +"-interfaceList-" + i + ".html");
@@ -477,8 +486,9 @@ public class StaticizeController extends BaseController{
 				
 				
 				// 静态化接口详情
-				for(Interface inter: customInterfaceService.selectByModuleId(module.getId())){
-					String html = HttpPostGet.get(config.getDomain()+ "/user/staticize/interfaceDetail.do?interfaceId="+ inter.getId() + 
+                interfaceQuery.setPageSize(ALL_PAGE_SIZE);
+				for(Interface inter: interfaceService.query(interfaceQuery)){
+					String html = HttpPostGet.get(Config.domain+ "/user/staticize/interfaceDetail.do?interfaceId="+ inter.getId() +
 							"&needStaticizes="+needStaticizes+ "&secretKey=" + secretKey, null, null, 10 * 1000);
 					Tools.staticize(html, path + "/" + inter.getId()+".html");
 				}
@@ -486,7 +496,7 @@ public class StaticizeController extends BaseController{
 			// 推送给百度
 //			try{
 //				if( !config.getBaidu().equals("") )
-//					HttpPostGet.postBody(config.getBaidu(), config.getDomain()+"/resources/html/staticize/"+project.getId()+"/"+module.getId()+"/list.html", null);
+//					HttpPostGet.postBody(config.getBaidu(), Config.domain+"/resources/html/staticize/"+project.getId()+"/"+module.getId()+"/list.html", null);
 //			}catch(Exception e){
 //				e.printStackTrace();
 //			}
@@ -495,25 +505,26 @@ public class StaticizeController extends BaseController{
 	}
 	
 	
-	private Map<String, Object> getProjectModuleInfor(Module module, Project project, String typeName) {
+	private Map<String, Object> getProjectModuleInfor(Module module, Project project, String typeName) throws MyException{
 		// 静态化
-		Map<String, String> settingMap = new HashMap<String, String>();
+		Map<String, String> settingMap = new HashMap<>();
 		for (SettingDto setting : settingCache.getAll()) {
 			settingMap.put(setting.getKey(), setting.getValue());
 		}
 		if(!MyString.isEmpty(project.getCover())){
 			if(!project.getCover().startsWith("http:") &&  !project.getCover().startsWith("https:") ){
-				project.setCover(config.getDomain() +"/"+ project.getCover());
+				project.setCover(Config.domain +"/"+ project.getCover());
 			}
 		}
 		
-		settingMap.put(IConst.DOMAIN, config.getDomain());
+		settingMap.put(IConst.DOMAIN, Config.domain);
 		Map<String,Object> returnMap = new HashMap<String,Object>();
 		returnMap.put("settings", settingMap);
 		returnMap.put("project", project);
 		returnMap.put("module", module);
 		// 将选中的模块放到第一位
-		List<Module> moduleList = customModuleService.queryByProjectId(project.getId());
+		List<Module> moduleList = moduleService.query(new ModuleQuery().setProjectId(project.getId()).setPageSize(ALL_PAGE_SIZE));
+
 		if(module != null){
 			for(Module m:moduleList){
 				if(m.getId().equals(module.getId())){

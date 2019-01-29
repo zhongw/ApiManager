@@ -9,7 +9,7 @@ String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.
 <head>
 	<%@ include  file="css.jsp"%>
 </head>
-<body class="BG_COLOR">
+<body class="s-bg-color">
 	<!-- top navbar -->
 	<%@ include  file="topNav.jsp"%>
 	
@@ -17,7 +17,7 @@ String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.
 		<div class="row min-h p0 m0">
 			<!-- leftMenu -->
 			<%@ include  file="left.jsp"%>
-			<div class="col-xs-12 col-md-9 p0 BG_COLOR m0 pt0">
+			<div class="col-xs-12 col-md-9 p0 s-bg-color m0 pt0">
 				<div class="BGFFF min-h500 p20">
 					<div class="col-xs-12 f16 fb pl10 mb10 adorn-bl-3" id="interface-content">
 						接口列表
@@ -25,7 +25,7 @@ String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.
 					<div class="cb"></div>
 					<c:if test="${interfaceList.size() == 0}">
 						<div class="col-xs-12 tc mt10 mb10 C999">
-									<i class="iconfont f20 mt-5 mr10">&#xe626;</i>该模块下没有接口
+									<i class="iconfont f20 mt-5 mr10">&#xe69c;</i>该模块下没有接口
 						</div>
 					</c:if>
 					

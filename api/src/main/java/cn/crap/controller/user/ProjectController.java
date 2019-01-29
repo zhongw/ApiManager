@@ -1,210 +1,248 @@
 package cn.crap.controller.user;
 
 import cn.crap.adapter.ProjectAdapter;
+import cn.crap.beans.Config;
 import cn.crap.dto.LoginInfoDto;
 import cn.crap.dto.ProjectDto;
-import cn.crap.enumer.*;
+import cn.crap.enu.*;
 import cn.crap.framework.JsonResult;
 import cn.crap.framework.MyException;
 import cn.crap.framework.base.BaseController;
 import cn.crap.framework.interceptor.AuthPassport;
-import cn.crap.model.mybatis.Project;
-import cn.crap.model.mybatis.ProjectCriteria;
-import cn.crap.service.ISearchService;
-import cn.crap.service.custom.CustomErrorService;
-import cn.crap.service.custom.CustomModuleService;
-import cn.crap.service.custom.CustomProjectService;
-import cn.crap.service.custom.CustomProjectUserService;
-import cn.crap.service.mybatis.*;
-import cn.crap.beans.Config;
-import cn.crap.utils.*;
+import cn.crap.model.Project;
+import cn.crap.query.*;
+import cn.crap.service.*;
+import cn.crap.utils.LoginUserHelper;
+import cn.crap.utils.MyString;
+import cn.crap.utils.Page;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Controller
 @RequestMapping("/user/project")
 public class ProjectController extends BaseController {
-@Autowired
-private ProjectService projectService;
-@Autowired
-private ISearchService luceneService;
-@Autowired
-private CustomErrorService customErrorService;
-@Autowired
-private UserService userService;
-@Autowired
-private CustomModuleService customModuleService;
-@Autowired
-private CustomProjectUserService customProjectUserService;
-	@Autowired
-	private CustomProjectService customProjectService;
-	@Autowired
-	private ProjectUserService projectUserService;
-	@Autowired
-	private RoleService roleService;
+    @Autowired
+    private ProjectService projectService;
+    @Autowired
+    private ISearchService luceneService;
+    @Autowired
+    private ErrorService errorService;
+    @Autowired
+    private UserService userService;
+    @Autowired
+    private ModuleService moduleService;
+    @Autowired
+    private ProjectUserService projectUserService;
+    @Autowired
+    private RoleService roleService;
+    @Autowired
+    private InterfaceService interfaceService;
+    @Autowired
+    private ArticleService articleService;
+    @Autowired
+    private SourceService sourceService;
 
-	@RequestMapping("/list.do")
-	@ResponseBody
-	@AuthPassport
-	public JsonResult list(@ModelAttribute Project project, Integer currentPage,
-						   @RequestParam(defaultValue="false") boolean myself) throws MyException{
-		Page page= new Page(currentPage);
-		LoginInfoDto user = LoginUserHelper.getUser();
-		String userId = user.getId();
-		List<Project> models = null;
-		List<ProjectDto> dtos = null;
+    @RequestMapping("/list.do")
+    @ResponseBody
+    @AuthPassport
+    public JsonResult list(@ModelAttribute ProjectQuery query,
+                           @RequestParam(defaultValue = "3") Integer projectShowType) throws MyException {
+        Page page = new Page(query);
+        LoginInfoDto user = LoginUserHelper.getUser();
+        String userId = user.getId();
+        List<Project> models;
 
-        // 普通用户，管理员我的项目菜单只能查看自己的项目
-		if( user.getType() == UserType.USER.getType() || myself){
-			page.setAllRow(customProjectService.countProjectByUserIdName(userId, project.getName()));
-			models = customProjectService.pageProjectByUserIdName(userId, project.getName(), page);
-		}else{
-			ProjectCriteria example = new ProjectCriteria();
-			ProjectCriteria.Criteria criteria = example.createCriteria();
-			if (project.getName() != null){
-				criteria.andNameLike("%" + project.getName() +"%");
-			}
-			example.setLimitStart(page.getStart());
-			example.setMaxResults(page.getSize());
-			example.setOrderByClause(TableField.SORT.SEQUENCE_DESC);
-			page.setAllRow(projectService.countByExample(example));
-			models = projectService.selectByExample(example);
-		}
+        // 我创建 & 加入的项目
+        if (ProjectShowType.CREATE_JOIN.getType() == projectShowType) {
+            page.setAllRow(projectService.count(userId, false, query.getName()));
+            models = projectService.query(userId, false, query.getName(), page);
+        }
 
-		dtos = ProjectAdapter.getDto(models, userService);
-		return new JsonResult(1,dtos, page);
-	}
+        // 我加入的项目
+        else if (ProjectShowType.JOIN.getType() == projectShowType) {
+            page.setAllRow(projectService.count(userId, true, query.getName()));
+            models = projectService.query(userId, true, query.getName(), page);
+        }
 
-	@RequestMapping("/detail.do")
-	@ResponseBody
-	@AuthPassport
-	public JsonResult detail(@ModelAttribute Project project) throws MyException{
-		Project model;
-		if(project.getId() != null){
-			model= projectCache.get(project.getId());
-			checkUserPermissionByProject(model);
-		}else{
-			model=new Project();
-		}
-		return new JsonResult(1,ProjectAdapter.getDto(model, null));
-	}
+        // 管理员查看所有项目
+        else if(ProjectShowType.ALL.getType() == projectShowType && user.getType() == UserType.ADMIN.getType()){
+            page.setAllRow(projectService.count(query));
+            models = projectService.query(query);
+        }
+
+        // 我创建的项目
+        else {
+            query.setUserId(userId);
+            page.setAllRow(projectService.count(query));
+            models = projectService.query(query);
+        }
+
+        return new JsonResult().page(page).data(ProjectAdapter.getDto(models, userService));
+    }
+
+    @RequestMapping("/detail.do")
+    @ResponseBody
+    @AuthPassport
+    public JsonResult detail(String id) throws MyException {
+        if (MyString.isNotEmpty(id)) {
+            Project model = projectCache.get(id);
+            checkPermission(model, READ);
+            ProjectDto dto = ProjectAdapter.getDto(model, null);
+            dto.setInviteUrl(projectService.getInviteUrl(dto));
+            return new JsonResult(1, dto);
+        }
+
+        Project model = new Project();
+        model.setType(ProjectType.PRIVATE.getByteType());
+        model.setStatus(ProjectStatus.COMMON.getStatus());
+        model.setLuceneSearch(CommonEnum.FALSE.getByteValue());
+        return new JsonResult(1, ProjectAdapter.getDto(model, null));
+    }
+
+    @RequestMapping("/moreInfo.do")
+    @ResponseBody
+    @AuthPassport
+    public JsonResult moreInfo(String id) throws MyException {
+        throwExceptionWhenIsNull(id, "项目ID不能为空");
+        Map<String, Integer> projectInfo = new HashMap<>();
+        projectInfo.put("moduleNum", moduleService.count(new ModuleQuery().setProjectId(id)));
+        projectInfo.put("projectUserNum", projectUserService.count(new ProjectUserQuery().setProjectId(id)));
+        projectInfo.put("errorNum", errorService.count(new ErrorQuery().setProjectId(id)));
+        projectInfo.put("interfaceNum", interfaceService.count(new InterfaceQuery().setProjectId(id)));
+        projectInfo.put("articleNum", articleService.count(new ArticleQuery().setProjectId(id).setType(ArticleType.ARTICLE.name())));
+        projectInfo.put("dictionaryNum", articleService.count(new ArticleQuery().setProjectId(id).setType(ArticleType.DICTIONARY.name())));
+        projectInfo.put("sourceNum", sourceService.count(new SourceQuery().setProjectId(id)));
+
+        return new JsonResult().data(projectInfo);
+    }
 
 
-	@RequestMapping("/addOrUpdate.do")
-	@ResponseBody
-	public JsonResult addOrUpdate(@ModelAttribute ProjectDto project) throws Exception{
-		String userId = LoginUserHelper.getUser().getId();
-		String projectId = project.getId();
+    @RequestMapping("/addOrUpdate.do")
+    @ResponseBody
+    public JsonResult addOrUpdate(@ModelAttribute ProjectDto project) throws Exception {
+        LoginInfoDto user = LoginUserHelper.getUser();
+        String userId = user.getId();
+        String projectId = project.getId();
 
-		// 私有项目不能建立索引
-		if (project.getType() == ProjectType.PRIVATE.getType()){
-			project.setLuceneSearch(LuceneSearchType.No.getByteValue());
-		}
+        checkCrapDebug(userId, projectId);
 
-		// 修改
-		if(!MyString.isEmpty(projectId)){
+        // 私有项目不能建立索引
+        if (project.getType() == ProjectType.PRIVATE.getType()) {
+            project.setLuceneSearch(LuceneSearchType.No.getByteValue());
+        }
+
+        // 修改
+        if (!MyString.isEmpty(projectId)) {
             Project dbProject = projectCache.get(projectId);
-			checkUserPermissionByProject(dbProject);
+            checkPermission(dbProject);
 
-			// 普通用户不能推荐项目，将项目类型修改为原有类型
-			if( LoginUserHelper.getUser().getType() == UserType.USER.getType()){
-				project.setStatus(null);
-			}
-			customProjectService.update(ProjectAdapter.getModel(project));
+            // 普通用户不能推荐项目，将项目类型修改为原有类型
+            if (LoginUserHelper.getUser().getType() == UserType.USER.getType()) {
+                project.setStatus(null);
+            }
+            projectService.update(ProjectAdapter.getModel(project), true);
 
             // 需要重建索引
             projectCache.del(projectId);
-            if (!project.getType().equals(dbProject.getType()) || !project.getLuceneSearch().equals(dbProject.getLuceneSearch())){
+            if (!project.getType().equals(dbProject.getType())
+                    || !project.getLuceneSearch().equals(dbProject.getLuceneSearch())) {
                 luceneService.rebuildByProjectId(projectId);
             }
-		}
-		// 新增
-		else{
-			Project model = ProjectAdapter.getModel(project);
-			model.setUserId(userId);
-			model.setPassword(project.getPassword());
-			// 普通用户不能推荐项目
-			if( LoginUserHelper.getUser().getType() == UserType.USER.getType()){
-				project.setStatus(Byte.valueOf(ProjectStatus.COMMON.getStatus()+""));
-			}
-			projectService.insert(model);
-		}
+        }
+        // 新增
+        else {
+            int totalProjectNum = projectService.count(new ProjectQuery().setUserId(userId));
+            Integer maxProject = settingCache.getInteger(SettingEnum.MAX_PROJECT);
+            if (totalProjectNum > maxProject) {
+                throw new MyException(MyError.E000068, maxProject + "");
+            }
 
-		// 清楚缓存
-		projectCache.del(projectId);
+            Project model = ProjectAdapter.getModel(project);
+            model.setUserId(userId);
+            model.setPassword(project.getPassword());
+            // 普通用户不能推荐项目
+            if (LoginUserHelper.getUser().getType() == UserType.USER.getType()) {
+                project.setStatus(Byte.valueOf(ProjectStatus.COMMON.getStatus() + ""));
+            }
+            projectService.insert(model);
+        }
 
-		// 刷新用户权限 将用户信息存入缓存
-		userCache.add(userId, new LoginInfoDto(userService.getById(userId), roleService, customProjectService, projectUserService));
-		return new JsonResult(1,project);
-	}
+        // 清楚缓存
+        projectCache.del(projectId);
 
-
-	@RequestMapping("/delete.do")
-	@ResponseBody
-	public JsonResult delete(@ModelAttribute Project project) throws Exception{
-		// 系统数据，不允许删除
-		if(project.getId().equals("web"))
-			throw new MyException(MyError.E000009);
+        // 刷新用户权限 将用户信息存入缓存
+        userCache.add(userId, new LoginInfoDto(userService.getById(userId), roleService, projectService, projectUserService));
+        return new JsonResult(1, project);
+    }
 
 
-		Project model= projectCache.get(project.getId());
-		checkUserPermissionByProject(model);
+    @RequestMapping("/delete.do")
+    @ResponseBody
+    public JsonResult delete(@ModelAttribute Project project) throws Exception {
+        // 系统数据，不允许删除
+        if (project.getId().equals("web")) {
+            throw new MyException(MyError.E000009);
+        }
+        checkCrapDebug(LoginUserHelper.getUser().getId(), project.getId());
+
+        Project model = projectCache.get(project.getId());
+        checkPermission(model);
 
 
-		// 只有子模块数量为0，才允许删除项目
-		if(customModuleService.countByProjectId(model.getId()) > 0){
-			throw new MyException(MyError.E000023);
-		}
+        // 只有子模块数量为0，才允许删除项目
+        if (moduleService.count(new ModuleQuery().setProjectId(model.getId())) > 0) {
+            throw new MyException(MyError.E000023);
+        }
 
-		// 只有错误码数量为0，才允许删除项目
-		if(customErrorService.countByProjectId(model.getId()) > 0){
-			throw new MyException(MyError.E000033);
-		}
+        // 只有错误码数量为0，才允许删除项目
+        if (errorService.count(new ErrorQuery().setProjectId(model.getId())) > 0) {
+            throw new MyException(MyError.E000033);
+        }
 
-		// 只有项目成员数量为0，才允许删除项目
-		if(customProjectUserService.countByProjectId(model.getId())>0){
-			throw new MyException(MyError.E000038);
-		}
+        // 只有项目成员数量为0，才允许删除项目
+        if (projectUserService.count(new ProjectUserQuery().setProjectId(model.getId())) > 0) {
+            throw new MyException(MyError.E000038);
+        }
 
-		projectCache.del(project.getId());
-		customProjectService.delete(project.getId());
-		return new JsonResult(1,null);
-	}
+        projectCache.del(project.getId());
+        projectService.delete(project.getId());
+        return new JsonResult(1, null);
+    }
 
-	@RequestMapping("/changeSequence.do")
-	@ResponseBody
-	@AuthPassport
-	public JsonResult changeSequence(@RequestParam String id,@RequestParam String changeId) throws MyException {
-		Project change = projectCache.get(changeId);
-		Project model = projectCache.get(id);
+    @RequestMapping("/changeSequence.do")
+    @ResponseBody
+    @AuthPassport
+    public JsonResult changeSequence(@RequestParam String id, @RequestParam String changeId) throws MyException {
+        Project change = projectCache.get(changeId);
+        Project model = projectCache.get(id);
 
-		checkUserPermissionByProject(change);
-		checkUserPermissionByProject(model);
+        checkPermission(change);
+        checkPermission(model);
 
-		int modelSequence = model.getSequence();
-		model.setSequence(change.getSequence());
-		change.setSequence(modelSequence);
+        int modelSequence = model.getSequence();
+        model.setSequence(change.getSequence());
+        change.setSequence(modelSequence);
 
-		projectService.update(model);
-		projectService.update(change);
+        projectService.update(model);
+        projectService.update(change);
 
-		return new JsonResult(1, null);
-	}
+        return new JsonResult(1, null);
+    }
 
-	@ResponseBody
-	@RequestMapping("/rebuildIndex.do")
-	@AuthPassport
-	public JsonResult rebuildIndex(@RequestParam String projectId) throws Exception {
-		Project model= projectCache.get(projectId);
-		checkUserPermissionByProject(model);
-		return new JsonResult(1, luceneService.rebuildByProjectId(projectId));
-	}
+    @ResponseBody
+    @RequestMapping("/rebuildIndex.do")
+    @AuthPassport
+    public JsonResult rebuildIndex(@RequestParam String projectId) throws Exception {
+        Project model = projectCache.get(projectId);
+        checkPermission(model);
+        return new JsonResult(1, luceneService.rebuildByProjectId(projectId));
+    }
 }

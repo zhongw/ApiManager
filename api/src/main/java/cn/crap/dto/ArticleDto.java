@@ -5,7 +5,7 @@ import java.util.Date;
 
 /**
  * Automatic generation by tools
- * dto: exchange data with VIEW
+ * dto: exchange data with READ
  */
 public class ArticleDto implements Serializable {
 	private String id;
@@ -23,11 +23,18 @@ public class ArticleDto implements Serializable {
 	private Byte canDelete;
 	private String category;
 	private Byte canComment;
+	private String canCommentName;
 	private Integer commentCount;
 	private Integer sequence;
 	private String markdown;
 	private String projectId;
 	private String createTimeStr;
+	private String projectName;
+	private String attributes;
+	/**
+	 * 是否用markdown
+	 */
+	private Boolean useMarkdown;
 
 	public void setId(String id){
 		this.id=id;
@@ -171,5 +178,37 @@ public class ArticleDto implements Serializable {
 
 	public void setCreateTimeStr(String createTimeStr) {
 		this.createTimeStr = createTimeStr;
+	}
+
+	public String getCanCommentName() {
+		return canCommentName;
+	}
+
+	public void setCanCommentName(String canCommentName) {
+		this.canCommentName = canCommentName;
+	}
+
+	public String getProjectName() {
+		return projectName;
+	}
+
+	public void setProjectName(String projectName) {
+		this.projectName = projectName;
+	}
+
+	public String getAttributes() {
+		return attributes;
+	}
+
+	public void setAttributes(String attributes) {
+		this.attributes = attributes;
+	}
+
+	public Boolean getUseMarkdown() {
+		return useMarkdown;
+	}
+
+	public void setUseMarkdown(Boolean useMarkdown) {
+		this.useMarkdown = useMarkdown;
 	}
 }

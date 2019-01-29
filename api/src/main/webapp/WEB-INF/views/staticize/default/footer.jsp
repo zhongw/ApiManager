@@ -1,5 +1,5 @@
 <%@ page language="java" import="java.util.*" pageEncoding="utf-8"%>
-		<div class="p0 m0 mt30 def-bg w FOOTER_BG_COLOR FOOTER_COLOR">
+		<div class="p0 m0 mt30 def-bg w s-nav-bg-color s-nav-color">
 			<div class="container p0">
 				<div class="row p0 m0">
 					<div class="col-xs-12 f12 p0 mb5 tl mt30 mb50 pl20">
@@ -14,7 +14,7 @@
 							</li>
 							<li  class="dis-in-tab pr20">
 								<a target="_blank"
-									href="https://git.oschina.net/CrapApi/CrapApi">源码:码云</a>
+									href="https://gitee.com/CrapApi/CrapApi">源码:码云</a>
 							</li>
 							<li  class="dis-in-tab pr20">
 								<a target="_blank"
@@ -36,7 +36,7 @@
 		<i class="iconfont f20" style="color: #FFF;">&#xe617;</i>
 	</div>
 	<script src="<%=basePath %>resources/framework/jquery-1.9.1.min.js"></script>
-	<script src="<%=basePath %>resources/framework/bootstrap-3.0.0/js/bootstrap.js"></script>
-	<script src="<%=basePath %>resources/js/core.js?v=200"></script>
-	<script src="<%=basePath %>resources/js/global.js?v=200"></script>
-	<script src="<%=basePath %>resources/js/crapApi.js?v=200"></script>
+	<script src="<%=basePath %>resources/framework/bootstrap-3.0.0/js/bootstrap.min.js"></script>
+	<script src="<%=basePath %>resources/js/core.js"></script>
+	<script src="<%=basePath %>resources/js/global.js"></script>
+	<script src="<%=basePath %>resources/js/crapApi.js"></script>

@@ -28,16 +28,13 @@ public class EmailService implements IEmailService {
 	private SettingCache settingCache;
 	@Autowired
 	private StringCache stringCache;
-	@Autowired
-	private Config config;
-	
+
 	@Override
 	public void sendMail(MailBean mailBean) throws UnsupportedEncodingException, MessagingException{
 		String fromName = settingCache.get(ISetting.S_TITLE).getValue();
 		MimeMessage mimeMessage = mailSenderService.createMimeMessage();
 		MimeMessageHelper messageHelper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
-		//messageHelper.setFrom(mailSenderService.getUsername(), fromName); 
-		messageHelper.setFrom(""); 
+		messageHelper.setFrom(mailSenderService.getUsername(), fromName); 
 		messageHelper.setSubject(mailBean.getSubject());  
 		messageHelper.setTo(mailBean.getToEmail());  
 		messageHelper.setText(mailBean.getContext(), true);// html: true  
@@ -67,7 +64,7 @@ public class EmailService implements IEmailService {
 	@Override
 	public void sendRegisterEmail(String eamil, String id) throws UnsupportedEncodingException, MessagingException{
 		String code =  Aes.encrypt(id);
-		String domain = config.getDomain() + "/back/validateEmail.do?i=" + code;
+		String domain = Config.domain + "/user/validateEmail.do?i=" + code;
 		MailBean mailBean = new MailBean();
 		mailBean.setContext( getMtml(eamil, "注册邮箱验证", "点击验证邮箱：<a href=\""+domain+"\">"+domain+"</a>"));
 		mailBean.setToEmail(eamil);

@@ -1,6 +1,7 @@
 package cn.crap.dto;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * Automatic generation by tools
@@ -14,6 +15,7 @@ public class InterfaceDto{
 	private String paramRemark;
 	private String requestExam;
 	private String responseParam;
+	// 错误码，多个错误码使用,分割
 	private String errorList;
 	private String trueExam;
 	private String falseExam;
@@ -24,6 +26,7 @@ public class InterfaceDto{
 	private String moduleUrl;
 	private String interfaceName;
 	private String remark;
+	// 错误码，json
 	private String errors;
 	private String updateBy;
     private String createTimeStr;
@@ -37,9 +40,19 @@ public class InterfaceDto{
 	private String monitorEmails;
 	private Boolean isTemplate;
 	private String projectId;
+	private String projectName;
 	private String remarkNoHtml;
 	private String contentType;
     private String contentTypeName;
+
+    /**
+     * crShow开头的参数仅用于显示，请求中crShow开头的参数将被过滤
+     */
+    private List<ParamDto> crShowResponseParamList;
+    private List<ParamDto> crShowHeaderList;
+    private List<ParamDto> crShowParamList;
+    // 参数类型：FORM、CUSTOM
+    private String paramType;
 
 	public void setId(String id){
 		this.id=id;
@@ -286,5 +299,45 @@ public class InterfaceDto{
 
     public void setContentTypeName(String contentTypeName) {
         this.contentTypeName = contentTypeName;
+    }
+
+	public String getProjectName() {
+		return projectName;
+	}
+
+	public void setProjectName(String projectName) {
+		this.projectName = projectName;
+	}
+
+    public List<ParamDto> getCrShowResponseParamList() {
+        return crShowResponseParamList;
+    }
+
+    public void setCrShowResponseParamList(List<ParamDto> crShowResponseParamList) {
+        this.crShowResponseParamList = crShowResponseParamList;
+    }
+
+    public List<ParamDto> getCrShowHeaderList() {
+        return crShowHeaderList;
+    }
+
+    public void setCrShowHeaderList(List<ParamDto> crShowHeaderList) {
+        this.crShowHeaderList = crShowHeaderList;
+    }
+
+    public String getParamType() {
+        return paramType;
+    }
+
+    public void setParamType(String paramType) {
+        this.paramType = paramType;
+    }
+
+    public List<ParamDto> getCrShowParamList() {
+        return crShowParamList;
+    }
+
+    public void setCrShowParamList(List<ParamDto> crShowParamList) {
+        this.crShowParamList = crShowParamList;
     }
 }

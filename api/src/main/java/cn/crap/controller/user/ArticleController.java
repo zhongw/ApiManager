@@ -3,19 +3,22 @@ package cn.crap.controller.user;
 import cn.crap.adapter.ArticleAdapter;
 import cn.crap.dto.ArticleDto;
 import cn.crap.dto.SearchDto;
-import cn.crap.enumer.*;
+import cn.crap.enu.*;
 import cn.crap.framework.JsonResult;
 import cn.crap.framework.MyException;
 import cn.crap.framework.base.BaseController;
 import cn.crap.framework.interceptor.AuthPassport;
-import cn.crap.model.mybatis.Article;
-import cn.crap.model.mybatis.ArticleWithBLOBs;
-import cn.crap.model.mybatis.Module;
-import cn.crap.model.mybatis.Project;
+import cn.crap.model.Article;
+import cn.crap.model.ArticleWithBLOBs;
+import cn.crap.model.Module;
+import cn.crap.model.Project;
+import cn.crap.query.ArticleQuery;
+import cn.crap.query.CommentQuery;
+import cn.crap.service.ArticleService;
+import cn.crap.service.CommentService;
 import cn.crap.service.ISearchService;
-import cn.crap.service.custom.CustomArticleService;
-import cn.crap.service.custom.CustomCommentService;
-import cn.crap.service.mybatis.ArticleService;
+import cn.crap.service.tool.ModuleCache;
+import cn.crap.service.tool.ProjectCache;
 import cn.crap.utils.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -38,99 +41,108 @@ public class ArticleController extends BaseController{
 	@Autowired
 	private ArticleService articleService;
 	@Autowired
-	private CustomArticleService customArticleService;
-	@Autowired
 	private ISearchService luceneService;
 	@Autowired
-	private CustomCommentService customCommentService;
+	private CommentService commentService;
+	@Autowired
+	private ProjectCache projectCache;
+	@Autowired
+	private ModuleCache moduleCache;
 
 	@RequestMapping("/list.do")
 	@ResponseBody
 	@AuthPassport
-	public JsonResult list(String moduleId, String name, String type, String category, Integer currentPage) throws MyException{
-		Assert.notNull(moduleId);
-		checkUserPermissionByModuleId(moduleId, VIEW);
-		
-		Page page= new Page(currentPage);
+	public JsonResult list(@ModelAttribute ArticleQuery query) throws MyException{
+		Project project = getProject(query);
+		Module module = getModule(query);
+        checkPermission(project, READ);
 
-		page.setAllRow(customArticleService.countByModuleId(moduleId, name, type, category, null));
-		List<Article> models = customArticleService.queryArticle(moduleId, name, type, category, null, page);
-		List<ArticleDto> dtos = ArticleAdapter.getDto(models, null);
+		Page page = new Page(query);
+		page.setAllRow(articleService.count(query));
+		List<Article> models = articleService.query(query);
+		List<ArticleDto> dtos = ArticleAdapter.getDto(models, module, project);
 
 		return new JsonResult().success().data(dtos).page(page)
-                .others(Tools.getMap("type", ArticleType.valueOf(type).getName(), "category", category));
+                .others(Tools.getMap("type", ArticleType.getByEnumName(query.getType()), "category", query.getCategory()));
 	}
 	
 	@RequestMapping("/detail.do")
 	@ResponseBody
 	@AuthPassport
-	public JsonResult detail(String id, String type, String moduleId) throws MyException{
-		if(id != null){
-            ArticleWithBLOBs article =  articleService.getById(id);
-            checkUserPermissionByProject(article.getProjectId(), VIEW);
-            Module module = moduleCache.get(article.getModuleId());
-			return new JsonResult(1, ArticleAdapter.getDtoWithBLOBs(article, module));
+	public JsonResult detail(String id, @ModelAttribute ArticleQuery query) throws MyException{
+		Project project = getProject(query);
+		Module module = getModule(query);
+		ArticleWithBLOBs article = new ArticleWithBLOBs();
+		if (id != null){
+			article =  articleService.getById(id);
+			project = projectCache.get(article.getProjectId());
+			module = moduleCache.get(article.getModuleId());
+		}else {
+			article.setType(query.getType());
+			article.setModuleId(module == null ? null : module.getId());
+			article.setStatus(ArticleStatus.COMMON.getStatus());
+			article.setCanDelete(CanDeleteEnum.CAN.getCanDelete());
+			article.setCanComment(CommonEnum.TRUE.getByteValue());
+			article.setProjectId(project.getId());
 		}
 
-		Module module = new Module();
-		if (moduleId != null) {
-			module = moduleCache.get(moduleId);
-			checkUserPermissionByProject(module.getProjectId(), VIEW);
-		}
-
-        ArticleWithBLOBs model = new ArticleWithBLOBs();
-		model.setType(type);
-		model.setModuleId(moduleId);
-		model.setProjectId(module.getProjectId());
-        model.setCanDelete(CanDeleteEnum.CAN.getCanDelete());
-		return new JsonResult(1, ArticleAdapter.getDtoWithBLOBs(model, module));
+		checkPermission(project, READ);
+		return new JsonResult(1, ArticleAdapter.getDtoWithBLOBs(article, module, project));
 	}
 	
 	@RequestMapping("/addOrUpdate.do")
 	@ResponseBody
 	public JsonResult addOrUpdate(@ModelAttribute ArticleDto dto) throws Exception{
-	    Assert.notNull(dto.getModuleId());
-	    if (ArticleStatus.PAGE.getStatus().equals(dto.getStatus()) && MyString.isEmpty(dto.getMkey())){
+	    Assert.notNull(dto.getProjectId(), "projectId can't be null");
+        if (ArticleStatus.PAGE.getStatus().equals(dto.getStatus()) && MyString.isEmpty(dto.getMkey())){
             throw new MyException(MyError.E000066);
         }
 
-        Project project = projectCache.get(moduleCache.get(dto.getModuleId()).getProjectId());
-        checkUserPermissionByProject(project, dto.getType().equals(ArticleType.ARTICLE.name())? ADD_ARTICLE : ADD_DICT);
+        String id = dto.getId();
+		String newProjectId = getProjectId(dto.getProjectId(), dto.getModuleId());
+        Project newProject = projectCache.get(newProjectId);
+		dto.setProjectId(newProjectId);
 
-		if(!MyString.isEmpty(dto.getId())){
-            ArticleWithBLOBs article = ArticleAdapter.getModel(dto);
+        ArticleWithBLOBs article = ArticleAdapter.getModel(dto);
+        // key、status 只有最高管理员 以及 拥有ARTICLE权限的管理员才能修改
+        if (!LoginUserHelper.checkAuthPassport(DataType.ARTICLE.name())){
+            article.setMkey(null);
+            article.setStatus(null);
+        }
 
-            // key、status 只有最高管理员 以及 拥有ARTICLE权限的管理员才能修改
-            if (!LoginUserHelper.checkAuthPassport(DataType.ARTICLE.name())){
-                article.setMkey(null);
-				article.setStatus(null);
-            }
+        // 修改
+		if(id != null){
+            String oldProjectId = articleService.getById(article.getId()).getProjectId();
+            checkPermission(newProjectId, article.getType().equals(ArticleType.ARTICLE.name())? MOD_ARTICLE : MOD_DICT);
+            checkPermission(oldProjectId, article.getType().equals(ArticleType.ARTICLE.name())? MOD_ARTICLE : MOD_DICT);
 
             // 只有项目拥有者可以修改是否可以删除属性
-            if (!LoginUserHelper.isAdminOrProjectOwner(project)){
+            if (!LoginUserHelper.isAdminOrProjectOwner(newProject)){
                 article.setCanDelete(null);
             }
 
-			customArticleService.update(article, ArticleType.getByEnumName(dto.getType()), "");
+			articleService.update(article, ArticleType.getByEnumName(article.getType()), "");
+		} else{
+            // 新增
+            checkPermission(newProject, article.getType().equals(ArticleType.ARTICLE.name())? ADD_ARTICLE : ADD_DICT);
+            articleService.insert(article);
+            id = article.getId();
+        }
 
-			ArticleWithBLOBs dbArticle = articleService.getById(dto.getId());
-			luceneService.update(ArticleAdapter.getSearchDto(dbArticle));
-            return new JsonResult(1,dto);
+		/**
+		 * 更新标：
+		 * mark_down：文本编辑器内容
+		 */
+        if (ArticleType.ARTICLE.name().equals(dto.getType())){
+			if (dto.getUseMarkdown() != null && dto.getUseMarkdown()){
+				articleService.updateAttribute(id, IAttributeConst.MARK_DOWN, IAttributeConst.TRUE);
+			} else {
+				articleService.deleteAttribute(id, IAttributeConst.MARK_DOWN);
+			}
 		}
 
-        ArticleWithBLOBs article = ArticleAdapter.getModel(dto);
-        article.setProjectId(project.getId());
-
-		// key、status 只有最高管理员 以及 拥有ARTICLE权限的管理员才能修改
-		if (!LoginUserHelper.checkAuthPassport(DataType.ARTICLE.name())){
-			article.setMkey(null);
-			article.setStatus(null);
-		}
-
-        articleService.insert(article);
-
-        luceneService.add(ArticleAdapter.getSearchDto(article));
-        return new JsonResult(1, dto);
+		luceneService.add(ArticleAdapter.getSearchDto(articleService.getById(id)));
+		return new JsonResult(1, article);
 
     }
 	
@@ -150,47 +162,27 @@ public class ArticleController extends BaseController{
 			}
 			Article model = articleService.getById(tempId);
 			Project project = projectCache.get(model.getProjectId());
-			checkUserPermissionByProject(project , model.getType().equals(ArticleType.ARTICLE.name())? DEL_ARTICLE : DEL_DICT);
+			checkPermission(project , model.getType().equals(ArticleType.ARTICLE.name())? DEL_ARTICLE : DEL_DICT);
 
 			if(model.getCanDelete().equals(CanDeleteEnum.CAN_NOT.getCanDelete()) && !LoginUserHelper.isAdminOrProjectOwner(project)){
 				throw new MyException(MyError.E000009);
 			}
 
-			if (customCommentService.countByArticleId(model.getId()) > 0){
+			if (commentService.count(new CommentQuery().setArticleId(model.getId())) > 0){
 				throw new MyException(MyError.E000037);
 			}
 
 			// 非管理员不能删除PAGE
-			if (ArticleStatus.PAGE.getStatus().equals(model.getStatus()) && !LoginUserHelper.isAdmin()){
+			if (ArticleStatus.PAGE.getStatus().equals(model.getStatus()) && !LoginUserHelper.isSuperAdmin()){
                 throw new MyException(MyError.E000009);
             }
 
-			customArticleService.delete(tempId, ArticleType.getByEnumName(model.getType()) , "");
-
 			luceneService.delete(new SearchDto(model.getId()));
+			articleService.delete(tempId, ArticleType.getByEnumName(model.getType()) , "");
 		}
 		return new JsonResult(1,null);
 	}
-	
-	@RequestMapping("/changeSequence.do")
-	@ResponseBody
-	@AuthPassport
-	public JsonResult changeSequence(@RequestParam String id, @RequestParam String changeId) throws MyException {
-		ArticleWithBLOBs change = articleService.getById(changeId);
-        ArticleWithBLOBs model = articleService.getById(id);
 
-		checkUserPermissionByProject(change.getProjectId(), change.getType().equals(ArticleType.ARTICLE.name())? MOD_ARTICLE:MOD_DICT);
-		checkUserPermissionByProject(model.getProjectId(), model.getType().equals(ArticleType.ARTICLE.name())? MOD_ARTICLE:MOD_DICT);
-		
-		int modelSequence = model.getSequence();
-		model.setSequence(change.getSequence());
-		change.setSequence(modelSequence);
-
-		articleService.update(model);
-		articleService.update(change);
-		return new JsonResult(1, null);
-	}
-	
 	@RequestMapping("/dictionary/importFromSql.do")
 	@ResponseBody
 	@AuthPassport
@@ -203,6 +195,8 @@ public class ArticleController extends BaseController{
 			article = SqlToDictionaryUtil.sqlserviceToDictionary(sql, brief, moduleId, name);
 		}
 		Module module = moduleCache.get(moduleId);
+        checkPermission(projectCache.get(module.getProjectId()), READ);
+
 		article.setProjectId(module.getProjectId());
 		articleService.insert(article);
 		return new JsonResult(1, new Article());

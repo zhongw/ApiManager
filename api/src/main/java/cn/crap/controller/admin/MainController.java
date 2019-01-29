@@ -1,12 +1,16 @@
 package cn.crap.controller.admin;
 
+import cn.crap.beans.Config;
 import cn.crap.dto.LoginInfoDto;
 import cn.crap.dto.SettingDto;
+import cn.crap.enu.SettingStatus;
 import cn.crap.framework.JsonResult;
 import cn.crap.framework.base.BaseController;
 import cn.crap.framework.interceptor.AuthPassport;
 import cn.crap.service.ISearchService;
+import cn.crap.service.tool.SystemService;
 import cn.crap.utils.HttpPostGet;
+import cn.crap.utils.IConst;
 import cn.crap.utils.LoginUserHelper;
 import cn.crap.utils.Tools;
 import net.sf.json.JSONObject;
@@ -23,6 +27,8 @@ import java.util.Map;
 public class MainController extends BaseController {
     @Autowired
     private ISearchService luceneService;
+    @Autowired
+    private SystemService systemService;
 
     /**
      * admin dashboard
@@ -34,7 +40,7 @@ public class MainController extends BaseController {
     @RequestMapping("/admin.do")
     @AuthPassport
     public String showHomePage() throws Exception {
-        return "resources/html/backHtml/index.html";
+        return "resources/html/admin/index.html";
     }
 
     /**
@@ -43,12 +49,26 @@ public class MainController extends BaseController {
      * @return
      * @throws Exception
      */
-    @RequestMapping("/property.do")
+    @RequestMapping("/admin/property.do")
     @AuthPassport(authority = C_AUTH_SETTING)
     @ResponseBody
     public JsonResult property() throws Exception {
-        Map<String, Object> returnMap = new HashMap<String, Object>();
-        returnMap.put("properties", config);
+        Map<String, Object> returnMap = new HashMap<>();
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("domain", Config.domain);
+        properties.put("openRegister", Config.openRegister);
+        properties.put("luceneSearchNeedLogin", Config.luceneSearchNeedLogin);
+        properties.put("openRegister", Config.openRegister);
+        properties.put("canRepeatUrl", Config.canRepeatUrl);
+        properties.put("cacheTime", Config.cacheTime);
+        properties.put("loginInforTime", Config.loginInforTime);
+        properties.put("fileSize", Config.fileSize);
+        properties.put("fileType", Config.fileType);
+        properties.put("imageType", Config.imageType);
+        properties.put("mail", Config.mail);
+        properties.put("clientID", Config.clientID);
+
+        returnMap.put("properties", properties);
         // 从crapApi获取版本信息
         try {
             String crapApiInfo =
@@ -72,21 +92,21 @@ public class MainController extends BaseController {
     }
 
     /**
-     * 登陆 or 注册页面
+     * 登录 or 注册页面
      *
      * @return
      * @throws Exception
      */
     @RequestMapping("/loginOrRegister.do")
     public String loginOrRegister() throws Exception {
-        return "resources/html/backHtml/loginOrRegister.html";
+        return "resources/html/admin/loginOrRegister.html";
     }
 
 
     /**
      * 删除错误提示
      */
-    @RequestMapping("/back/closeErrorTips.do")
+    @RequestMapping("/admin/closeErrorTips.do")
     @ResponseBody
     @AuthPassport(authority = C_AUTH_ADMIN)
     public JsonResult closeErrorTips() throws Exception {
@@ -97,17 +117,18 @@ public class MainController extends BaseController {
     /**
      * 后台页面初始化
      */
-    @RequestMapping("/back/init.do")
+    @RequestMapping({"/admin/init.do", "back/init.do"})
     @ResponseBody
     @AuthPassport
     public JsonResult init(HttpServletRequest request) throws Exception {
-        Map<String, String> settingMap = new HashMap<String, String>();
+        Map<String, String> settingMap = new HashMap<>();
         for (SettingDto setting : settingCache.getAll()) {
-            if (S_SECRETKEY.equals(setting.getKey())) {
-                continue;
+            if (SettingStatus.COMMON.getStatus().equals(setting.getStatus())) {
+                settingMap.put(setting.getKey(), setting.getValue());
             }
-            settingMap.put(setting.getKey(), setting.getValue());
         }
+        settingMap.put(IConst.DOMAIN, Config.domain);
+
         Map<String, Object> returnMap = new HashMap<String, Object>();
         returnMap.put("settingMap", settingMap);
         LoginInfoDto user = LoginUserHelper.getUser();
@@ -116,6 +137,7 @@ public class MainController extends BaseController {
         returnMap.put("sessionAdminRoleIds", user.getRoleId());
         returnMap.put("sessionAdminId", user.getId());
         returnMap.put("errorTips", stringCache.get(C_CACHE_ERROR_TIP));
+
         return new JsonResult(1, returnMap);
     }
 
@@ -123,7 +145,7 @@ public class MainController extends BaseController {
      * 重建索引，只有最高管理员才具有该权限
      */
     @ResponseBody
-    @RequestMapping("/back/rebuildIndex.do")
+    @RequestMapping("/admin/rebuildIndex.do")
     @AuthPassport(authority = C_SUPER)
     public JsonResult rebuildIndex() throws Exception {
         return new JsonResult(1, luceneService.rebuild());
@@ -135,7 +157,7 @@ public class MainController extends BaseController {
      * @return
      */
     @ResponseBody
-    @RequestMapping("/back/flushDB.do")
+    @RequestMapping("/admin/flushDB.do")
     @AuthPassport(authority = C_SUPER)
     public JsonResult flushDb() {
         projectCache.flushDB();
@@ -145,4 +167,23 @@ public class MainController extends BaseController {
         objectCache.flushDB();
         return new JsonResult().success();
     }
+
+    @ResponseBody
+    @RequestMapping("/admin/compress.do")
+    @AuthPassport(authority = C_SUPER)
+    public JsonResult compress() throws Exception{
+        systemService.compressSource();
+        systemService.mergeSource();
+        return new JsonResult().success();
+    }
+
+    @ResponseBody
+    @RequestMapping("/admin/cleanLog.do")
+    @AuthPassport(authority = C_SUPER)
+    public JsonResult cleanLog() throws Exception{
+        systemService.cleanLog();
+        return new JsonResult().success();
+    }
+
+
 }

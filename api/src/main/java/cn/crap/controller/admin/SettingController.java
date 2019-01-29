@@ -1,20 +1,17 @@
 package cn.crap.controller.admin;
 
 import cn.crap.adapter.SettingAdapter;
-import cn.crap.beans.Config;
 import cn.crap.dto.SettingDto;
-import cn.crap.enumer.MyError;
+import cn.crap.enu.MyError;
 import cn.crap.framework.JsonResult;
 import cn.crap.framework.MyException;
 import cn.crap.framework.base.BaseController;
 import cn.crap.framework.interceptor.AuthPassport;
-import cn.crap.model.mybatis.Setting;
-import cn.crap.model.mybatis.SettingCriteria;
-import cn.crap.service.custom.CustomSettingService;
-import cn.crap.service.mybatis.SettingService;
+import cn.crap.model.Setting;
+import cn.crap.query.SettingQuery;
+import cn.crap.service.SettingService;
+import cn.crap.service.tool.SystemService;
 import cn.crap.utils.Page;
-import cn.crap.utils.TableField;
-import cn.crap.utils.Tools;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -23,40 +20,28 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 @Controller
+@RequestMapping("/admin")
 public class SettingController extends BaseController {
 
     @Autowired
     private SettingService settingService;
     @Autowired
-    private CustomSettingService customSettingService;
+    private SettingService customSettingService;
     @Autowired
-    private Config config;
-    private final static String[] indexUrls = new String[]{"index.do", "front/", "project.do", "dashboard.htm"};
+    private SystemService systemService;
+    private final static String[] indexUrls = new String[]{"index.do", "visitor/", "project.do", "dashboard.htm"};
 
     /**
-     * @param currentPage 当前页
      * @return
      */
     @RequestMapping("/setting/list.do")
     @ResponseBody
     @AuthPassport(authority = C_AUTH_SETTING)
-    public JsonResult list(String key, String remark, Integer currentPage) {
-        Page page = new Page(currentPage);
+    public JsonResult list(@ModelAttribute SettingQuery query) throws MyException{
+        Page page = new Page(query);
 
-        SettingCriteria example = new SettingCriteria();
-        SettingCriteria.Criteria criteria = example.createCriteria();
-        if (key != null) {
-            criteria.andMkeyLike(key);
-        }
-        if (remark != null) {
-            criteria.andRemarkLike(remark);
-        }
-        example.setOrderByClause(TableField.SORT.SEQUENCE_DESC);
-        example.setLimitStart(page.getStart());
-        example.setMaxResults(page.getSize());
-
-        page.setAllRow(settingService.countByExample(example));
-        return new JsonResult().data(SettingAdapter.getDto(settingService.selectByExample(example))).page(page);
+        page.setAllRow(settingService.count(query));
+        return new JsonResult().data(SettingAdapter.getDto(settingService.query(query))).page(page);
     }
 
     @RequestMapping("/setting/detail.do")
@@ -104,21 +89,9 @@ public class SettingController extends BaseController {
             settingService.insert(SettingAdapter.getModel(settingDto));
         }
         settingCache.del(settingDto.getKey());
+        systemService.updateSettingCss();
+        systemService.mergeSource();
 
-        // 更新css模板，静态化css文件
-        String cssPath = Tools.getServicePath() + "resources/css/";
-        Tools.createFile(cssPath);
-        String cssContent = Tools.readFile(cssPath + "setting.tpl");
-        for (SettingDto s : settingCache.getAll()) {
-            String value = s.getValue();
-            if (value != null && (value.toLowerCase().endsWith(".jpg") || value.toLowerCase().endsWith(".png"))) {
-                if (!value.startsWith("http://") && !value.startsWith("https://")) {
-                    value = config.getDomain() + "/" + value;
-                }
-            }
-            cssContent = cssContent.replace("{{settings." + s.getKey() + "}}", value);
-        }
-        Tools.staticize(cssContent, cssPath + "/setting.css");
         return new JsonResult().data(settingDto);
     }
 
@@ -135,7 +108,7 @@ public class SettingController extends BaseController {
         return SUCCESS;
     }
 
-    @RequestMapping("/back/setting/changeSequence.do")
+    @RequestMapping("/setting/changeSequence.do")
     @ResponseBody
     @AuthPassport(authority = C_AUTH_SETTING)
     public JsonResult changeSequence(@RequestParam String id, @RequestParam String changeId) {

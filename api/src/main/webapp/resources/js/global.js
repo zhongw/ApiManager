@@ -9,16 +9,41 @@ function goTop(){
 }
 
 //将指定id的控件滚动到浏览器顶部，如：接口详情页目录
-function scrollToId(id){
-	$("html, body").animate({ scrollTop: $("#"+id).offset().top }, 400);
+function scrollToId(id) {
+    $("html, body").animate({scrollTop: $("#" + id).offset().top}, 400);
 }
-function getMarkdownText(html){
-	// 从markdown编辑器中提取文本
-	return replaceAll(html,"ace_line_group","\">\n<\"").replace(/<[^>]+>/g,"") ;
+function scrollToIdByParentId(parentId, id, adjustPix) {
+    var mainContainer = $('#' + parentId);
+    var scrollToContainer =  $('#' + id);
+    mainContainer.animate({scrollTop: scrollToContainer.offset().top - mainContainer.offset().top + mainContainer.scrollTop() + adjustPix}, 200);
 }
 function tooltip(id){
 	 $("[data-toggle='tooltip']").tooltip(); 
 	 $("#"+id).tooltip('show');
+}
+// 获取url中的指定参数
+function getParamFromUrl(url, name) {
+	if (url.indexOf('?') <=0 ){
+		return null;
+	}
+    url = url.substring(url.indexOf('?') + 1);
+    var parameters = url.split('&');
+    for (var i = 0; i < parameters.length; i++) {
+    	if(parameters[i].split('=').length == 2 && parameters[i].split('=')[0] == name){
+    		return parameters[i].split('=')[1];
+		}
+    }
+    return null;
+}
+// 替换url中的指定参数
+function replaceParamFromUrl(url, name, value) {
+    var oldValue = getParamFromUrl(url, name);
+    if (oldValue){
+    	url = replaceAll(url, name + "=" + oldValue, name + "=" + value);
+	}else {
+        url = url + "&" + name + "=" + value;
+    }
+    return url;
 }
 
 /**
@@ -28,6 +53,9 @@ function tooltip(id){
  * @param newStr 替换后的字符串
  */
 function replaceAll(originalStr,oldStr,newStr){
+	if (!newStr){
+		newStr = '';
+	}
 	var regExp = new RegExp(oldStr,"gm");
 	return originalStr.replace(regExp,newStr)
 }
@@ -66,7 +94,8 @@ var dialogOldTop;
 var dialogOldLeft;
 var dialogOldHeight;
 var dialogOldWidth;
-function fullMyDialog(tagDiv){
+var oldMaxHeight;
+function fullMyDialog(tagDiv,tagDivContent){
 	var target = $("#"+tagDiv);
 	if( target.css('top') != '0px'){
 		dialogOldTop = target.css('top');
@@ -77,15 +106,20 @@ function fullMyDialog(tagDiv){
 		$("#"+tagDiv).css("left","0px");
 		$("#"+tagDiv).css("height","100%");
 		$("#"+tagDiv).css("width","100%");
-		$("#myDialogContent").css("max-height","100%");
+        $("#"+tagDiv).css("width","100%");
+        if (tagDivContent) {
+            oldMaxHeight = $("#" + tagDivContent).maxHeight;
+            $("#" + tagDivContent).css("max-height", "100%");
+        }
 	}else{
 		$("#"+tagDiv).css("top",dialogOldTop);
 		$("#"+tagDiv).css("left",dialogOldLeft);
 		$("#"+tagDiv).css("height",dialogOldHeight);
 		$("#"+tagDiv).css("width",dialogOldWidth);
-		$("#myDialogContent").removecss("max-height");
+        if (tagDivContent) {
+            $("#" + tagDivContent).css("max-height", oldMaxHeight);
+        }
 	}
-	
 }
 function loadPick(event,iwidth,iheight,radio,tag,code,def,params,showType,iCallBack,iCallBackParam) {
 	/***********加载选择对话框********************/
@@ -152,26 +186,6 @@ function uploadFileCallBack(msg, url) {
 			    if(!rootScope.model.name){
 			    	rootScope.model.name = $("#filePath").val().substring($("#filePath").val().lastIndexOf("\\")+1);
 			    }
-			});
-		}
-	}else {
-		$("#lookUpContent").html(err1 + "&nbsp; " + url + "" + err2);
-		showMessage('lookUp', 'false', false, 3);
-	}
-}
-//文章页面上传图片回调方法
-function acticleUploadImgCallBack(msg, url) {
-	if (msg.indexOf("[OK]") >= 0) {
-		showMessage('lookUp', 'false', false, 0);
-		if (url!= undefined) {
-			//修改setting中的value
-			var rootScope = getRootScope();
-			rootScope.$apply(function () {  
-				if(rootScope.model.content)
-					rootScope.model.content =  rootScope.model.content + "<div class='tc'><img src='"+url+"' /></div>";
-				else
-					rootScope.model.content =  "<div class='tc'><img src='"+url+"' /></div>";
-					
 			});
 		}
 	}else {
@@ -305,4 +319,63 @@ function sleep(numberMillis) {
 	       now = new Date(); 
 	       if (now.getTime() > exitTime)    return;
 	    }
-	}
+}
+
+var tipMessage = "        .----.\n" +
+    "       _.'__    `.\n" +
+    "   .--($$)($$)--/#\\\n" +
+    " .' @          /###\\\n" +
+    " :         ,   #####\n" +
+    "  `-..__.-' _.-###/\n" +
+    "        `:_:    `\"'\n" +
+    "      .'\"\"\"\"\"'.\n" +
+    "     //  CRAP \\\\\n" +
+    "     //  API!  \\\\\n" +
+    "    `-._______.-'\n" +
+    "    ___`. | .'___\n" +
+    "   (______|______)\n";
+/**
+ * 立即运行函数，用来检测控制台是否打开
+ */
+!function () {
+    // 创建一个对象
+    var foo = /./;
+    var i = 0;
+    // 将其打印到控制台上，实际上是一个指针
+    console.info(foo);
+    foo.toString =  function () {
+        i++;
+        var tip = '';
+        for (var time=1; time < i; time++){
+            tip = tip + '又';
+        }
+        if (i==1) {
+            console.info('~ 想查看源代码？来这啊↩ ~');
+            console.info('~ https://github.com/EhsanTang/ApiManager ~');
+            console.info('~ https://gitee.com/CrapApi/CrapApi ~');
+            console.info('~ 完全开源、免费，记得star、fork再走哦 ~');
+            console.info('~ 视频介绍、安装部署...，请前往官网 http://api.crap.cn ~');
+        }else{
+            console.info('~ 你' + tip + '来了，star、fork了吗 ~');
+        }
+        return tipMessage;
+    };
+    // 要在第一次打印完之后再重写toString方法
+}();
+
+// 进入默认地址
+(function () {
+    var href = location.href;
+    if (href.indexOf("#") <= 0 && href.indexOf("admin.do") > 0){
+        location.href = href + URL_LIST[MY_PROJECT];
+    }
+})();
+
+// 百度统计
+var _hmt = _hmt || [];
+(function() {
+    var hm = document.createElement("script");
+    hm.src = "https://hm.baidu.com/hm.js?b4a454e8f7114e487f10d7852f0c55c8";
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(hm, s);
+})();

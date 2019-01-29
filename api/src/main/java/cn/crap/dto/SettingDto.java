@@ -1,6 +1,6 @@
 package cn.crap.dto;
 
-import cn.crap.enumer.SettingType;
+import cn.crap.enu.SettingType;
 import cn.crap.utils.MyString;
 
 public class SettingDto{
@@ -79,7 +79,7 @@ public class SettingDto{
 
     public String getTypeName(){
         if(!MyString.isEmpty(type)){
-            return SettingType.getValue(type);
+            return SettingType.getName(type);
         }
         return "";
 

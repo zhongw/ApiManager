@@ -1,4 +1,23 @@
-function format(txt, tiperror, compress/*是否为压缩模式*/) {/* 格式化JSON源码(对象转换为JSON文本) */
+function format(txt, tiperror){
+	try {
+	    var txtObj = JSON.parse(txt);
+        return JSON.stringify(txtObj, null, 5);
+    }catch (e){
+	    if (tiperror){
+            alert("格式化异常，请检查json格式是否有误" + e);
+        }
+        return txt;
+	}
+}
+
+/**
+ * 待删除，已经被替换
+ * @param txt
+ * @param tiperror
+ * @param compress
+ * @returns {string}
+ */
+function format_delete(txt, tiperror, compress/*是否为压缩模式*/) {/* 格式化JSON源码(对象转换为JSON文本) */
 	var indentChar = '    ';
 	if (/^\s*$/.test(txt)) {
 		if (tiperror)
@@ -71,14 +90,16 @@ function jsonToDiv(txt) {/* 格式化JSON源码(对象转换为JSON文本) */
 		alert('数据源语法错误,格式化失败! 错误信息: ' + e.description, 'err');
 		return "";
 	}
-	;
-	var draw = [], line = ',', nodeCount = 0;
 
-	var notify = function(name, value, indent) {
+	var draw = [], line = ',', nodeCount = 0;
+    var paramSeparator = "->";
+	var notify = function(parentName, name, value, indent) {
 		nodeCount++;/*节点计数*/
 		
-		for (var i = 0, tab = ''; i < indent; i++)
-			tab += indentChar;/* 缩进HTML */
+		for (var i = 0, tab = ''; i < indent; i++) {
+            tab += indentChar;
+            /* 缩进HTML */
+        }
 		indent ++;
 		if (value && value.constructor == Array) {/*处理数组*/
 			if( value.length > 0 ){
@@ -93,29 +114,39 @@ function jsonToDiv(txt) {/* 格式化JSON源码(对象转换为JSON文本) */
 				}else if (typeof value == 'boolean') {
 					type = 'boolean';
 				}
+
 				if( name != ''){
-					draw.push('{"deep":"'+tab.length+'","name":"'+name+'","remark":"","type":"array['+type+']","necessary":"true"}' + line);
+                    if (parentName && parentName != ''){
+                        parentName = parentName + paramSeparator + name;
+                    } else {
+                        parentName = name;
+                    }
+					draw.push('{"deep":"'+tab.length+'","name":"'+ parentName +'","remark":"","type":"array['+type+']","necessary":"true"}' + line);
 				}else{
 					indent = indent -1;
 				}
 				
 				// 数组只需要记录第一个就行
-				notify("", value[0], indent);
+				notify(parentName, "", value[0], indent);
 			}
 			
 		} else if (value && typeof value == 'object') {/*处理对象*/
-			
 			// 数组中的元素，没有名称
 			if( name != ''){
+                if (parentName && parentName != ''){
+                    parentName = parentName + paramSeparator + name;
+                } else {
+                    parentName = name;
+                }
 				// 将对象名放入队列
-				draw.push('{"deep":"'+tab.length+'","name":"'+name+'","remark":"","type":"object","necessary":"true"}' + line);
+				draw.push('{"deep":"'+tab.length+'","name":"'+ parentName +'","remark":"","type":"object","necessary":"true"}' + line);
 			}else{
 				indent = indent -1;// 名称为空，无需缩进
 			}
-			
-			for ( var key in value)
-				notify(key, value[key], indent);
-			
+
+			for ( var key in value) {
+                notify(parentName, key, value[key], indent);
+            }
 		} else {
 			var type;
 			if (typeof value == 'string') {
@@ -127,16 +158,20 @@ function jsonToDiv(txt) {/* 格式化JSON源码(对象转换为JSON文本) */
 			}else if (typeof value == 'boolean') {
 				type = 'boolean';
 			}
-			
-			if(name != ""){// 数组中的字符等没有名称
-				draw.push('{"deep":"'+tab.length+'","name":"'+name+'","remark":"","type":"'+type+'","necessary":"true"}' + line);
+
+			if(name != ""){// 数组中的字符等没有名称，基础数组不需要记录
+                if (parentName && parentName != ''){
+                    parentName = parentName + paramSeparator + name;
+                } else {
+                    parentName = name;
+                }
+				draw.push('{"deep":"'+tab.length+'","name":"'+parentName+'","remark":"","type":"'+type+'","necessary":"true"}' + line);
 			}
 		}
-		;
 	};
 	
 	var indent = 0;
-	notify('', data, indent);
+	notify('', '', data, indent);
 	var result = draw.join('');
 	if(result.length > 0){
 		result = result.substring(0,result.length-1);

@@ -2,9 +2,9 @@ package cn.crap.service.tool;
 
 import cn.crap.adapter.SettingAdapter;
 import cn.crap.dto.SettingDto;
-import cn.crap.model.mybatis.Setting;
-import cn.crap.service.ICacheService;
-import cn.crap.service.custom.CustomSettingService;
+import cn.crap.enu.SettingEnum;
+import cn.crap.model.Setting;
+import cn.crap.service.SettingService;
 import cn.crap.beans.Config;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -16,28 +16,34 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Service("settingCache")
-public class SettingCache implements ICacheService<SettingDto> {
+public class SettingCache{
 	private static List<SettingDto> settingDtos = null;
 	private static Cache<String, SettingDto> cache;
 	public static final String CACHE_PREFIX = "setting";
 
 	@Autowired
-	private Config config;
-	@Autowired
-	private CustomSettingService customSettingService;
+	private SettingService customSettingService;
 
 	public Cache<String, SettingDto> getCache(){
 	    if (cache == null) {
             cache = CacheBuilder.newBuilder()
                     .initialCapacity(10)
                     .concurrencyLevel(5)
-                    .expireAfterWrite(config.getCacheTime(), TimeUnit.SECONDS)
+                    .expireAfterWrite(Config.cacheTime, TimeUnit.SECONDS)
                     .build();
         }
         return cache;
 	}
 	
-	@Override
+	public Integer getInteger(SettingEnum settingEnum){
+		try {
+			return Integer.parseInt(get(settingEnum.getKey()).getValue());
+		}catch (Exception e){
+			return Integer.parseInt(settingEnum.getValue());
+		}
+	}
+
+	
 	public SettingDto get(String key){
 		Assert.notNull(key);
 		Object obj = getCache().getIfPresent(assembleKey(key));
@@ -54,14 +60,14 @@ public class SettingCache implements ICacheService<SettingDto> {
 		return settingDto;
 	}
 
-    @Override
+    
     public boolean del(String key){
 		getCache().invalidate(CACHE_PREFIX + key);
 		settingDtos = null;
         return true;
     }
 
-	@Override
+	
     public boolean flushDB(){
 		getCache().invalidateAll();
 		settingDtos = null;
@@ -86,4 +92,11 @@ public class SettingCache implements ICacheService<SettingDto> {
         return CACHE_PREFIX + key;
     }
 
+    public boolean equalse(SettingEnum settingEnum, String value){
+    	if (value == null || settingEnum == null || this.get(settingEnum.getKey()) == null
+				|| this.get(settingEnum.getKey()).getValue() == null){
+			return false;
+		}
+		return this.get(settingEnum.getKey()).getValue().equals(value);
+	}
 }
